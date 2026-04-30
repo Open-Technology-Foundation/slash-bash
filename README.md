@@ -175,6 +175,9 @@ layout on `okusi`, so unsetting all of them yields the original behaviour.
 | `TZ` | `/systemprompt` | Used to render the `{{spacetime}}` substitution. Falls back to `/etc/timezone`, then `UTC`. |
 | `DEBUG` | library load time | If non-empty, the rewritten `__sb_dispatch …` form is *not* hidden from history (useful when debugging the chord trick). |
 | `HISTIGNORE` | library load time | Patched (idempotently) to suppress `__sb_dispatch *` from history when `DEBUG` is unset. |
+| `SB_VERBOSE` | library load time | Initial value of the internal `_VERBOSE` gate (`0`/`1`); `_info`/`_success`/`_vecho` are no-ops unless set. |
+| `SB_DEBUG` | library load time | Initial value of the internal `_DEBUG` gate; `_debug` messages are emitted when non-zero. Distinct from `DEBUG` (which only governs `HISTIGNORE`). |
+| `SB_LOG_ARGS` | history logger | If non-empty, the full original `/cmd args…` line is recorded in `$_SB_HISTORY_FILE`. Default logs only the verb (e.g. `/ask`) so prompt text and PII never land on disk. |
 | `XDG_CACHE_HOME`, `XDG_CONFIG_HOME` | library load time | Standard XDG base-dir overrides for the history file and site hook defaults. |
 
 ## Portability
@@ -329,7 +332,16 @@ If you don't want to commit a handler upstream, drop a file at
 `${XDG_CONFIG_HOME:-$HOME/.config}/slash-bash/site.bash` (or set
 `SB_SITE_BASH` to point elsewhere). It's sourced at the end of the
 library load, **after** `handlers.d/*.bash` and after key bindings /
-compspecs are registered. Prefer the registry path:
+compspecs are registered.
+
+The site hook is gated by an ssh-style ownership/permissions check: it
+will be skipped (with a warning) if it is not owned by `$USER` or if
+group/other write bits are set (mode `0?22` or worse). This prevents the
+classic shared-box confused-deputy trap where a careless `chmod -R g+w`
+under `$HOME` would let any group member inject code into every
+`slash-bash` session. Keep the file `chmod 600` (or `644`).
+
+Prefer the registry path:
 
 ```bash
 # ~/.config/slash-bash/site.bash
@@ -404,7 +416,7 @@ slash-bash
 
 ## Standards
 
-- **BCS** (Bash Coding Standard) compliance: ~91%. The library deliberately
+- **BCS** (Bash Coding Standard) compliance: ~92%. The library deliberately
   omits `set -euo pipefail` because errexit in a sourced library would kill
   the live interactive shell on any handler failure; this is documented in
   the source. Run `make audit` (gitignored output → `AUDIT-BASH.md`) to

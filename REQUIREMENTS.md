@@ -86,17 +86,17 @@ All start with `_SB_` prefix. Initial values come from like-named env vars (`SB_
 
 ### 2.2 Env-Var Convention
 
-**FR-2.2.1** — slash-bash-owned vars use the `SB_` prefix (`SB_AGENT`, `SB_MODEL`, `SB_MAX_TOKENS`, `SB_OLLAMA`, `SB_HISTORY_FILE`, `SB_SITE_BASH`, `SB_DIRTY_WINDOW`, `SB_SESSION_CWD`, `SB_SESSION_UUID`, `SB_SESSION_LAST_ASK`, `SB_KB_LIST`, `SB_MODEL_LIST`, `SB_CLAUDE_PROJECTS_DIR`). Cross-project Okusi conventions are reused verbatim (`VECTORDBS`, `AGENTS_JSON`, `OLLAMA_MODEL`, `OLLAMA_HOST`). Behaviour with no env vars set MUST reproduce the original hardcoded defaults exactly. The `SB_SESSION_*` + `SB_DIRTY_WINDOW` quartet is the round-trip restore path: `eval "$(/status)"` then `slash-bash` MUST reproduce the conversation binding.
+**FR-2.2.1** — slash-bash-owned vars use the `SB_` prefix (`SB_AGENT`, `SB_MODEL`, `SB_MAX_TOKENS`, `SB_OLLAMA`, `SB_HISTORY_FILE`, `SB_SITE_BASH`, `SB_DIRTY_WINDOW`, `SB_SESSION_CWD`, `SB_SESSION_UUID`, `SB_SESSION_LAST_ASK`, `SB_KB_LIST`, `SB_MODEL_LIST`, `SB_CLAUDE_PROJECTS_DIR`, `SB_VERBOSE`, `SB_DEBUG`, `SB_LOG_ARGS`). Cross-project Okusi conventions are reused verbatim (`VECTORDBS`, `AGENTS_JSON`, `OLLAMA_MODEL`, `OLLAMA_HOST`). Behaviour with no env vars set MUST reproduce the original hardcoded defaults exactly. The `SB_SESSION_*` + `SB_DIRTY_WINDOW` quartet is the round-trip restore path: `eval "$(/status)"` then `slash-bash` MUST reproduce the conversation binding. `SB_LOG_ARGS` defaults to unset; the history logger then records only the command verb (e.g. `/ask`) — set `SB_LOG_ARGS=1` to log full original lines.
 
 ---
 
 ## 3. Architectural Invariants (load-bearing — do not violate)
 
-**AI-3.1 — The chord trick is the *only* viable interception mechanism.** `command_not_found_handle` is rejected because bash runs `execve()` *before* the handler fires, so the user has already seen the cryptic `bash: /foo: No such file or directory`. The abandoned prototype `.gudang/process-llm-command` is preserved as historical evidence; it MUST NOT be revived. Implementation: bind `\C-xs` to `__sb_intercept`, bind `\C-m` (Enter) to the macro `\C-xs\C-j` so the interceptor mutates `READLINE_LINE` *before* bash's parser sees it. (`slash-bash.bash:548-551`.)
+**AI-3.1 — The chord trick is the *only* viable interception mechanism.** `command_not_found_handle` is rejected because bash runs `execve()` *before* the handler fires, so the user has already seen the cryptic `bash: /foo: No such file or directory`. The abandoned prototype `.gudang/process-llm-command` is preserved as historical evidence; it MUST NOT be revived. Implementation: bind `\C-xs` to `__sb_intercept`, bind `\C-m` (Enter) to the macro `\C-xs\C-j` so the interceptor mutates `READLINE_LINE` *before* bash's parser sees it. (`slash-bash.bash:557-560`.)
 
 **AI-3.2 — Two-keymap binding (`emacs` + `vi-insert`) MUST NOT be collapsed.** The visible duplication is intentional — collapsing breaks vi-mode users.
 
-**AI-3.3 — The library MUST be source-pure.** Sourcing `slash-bash.bash` only declares functions and state. No filesystem mutation, no network, no side effects. The history dir is created lazily on first write (`_sb_ensure_history_dir`, `slash-bash.bash:454-462`). Direct dependency `bash-preexec.sh` is existence-checked before sourcing (`slash-bash.bash:33-43`). (BCS0407.)
+**AI-3.3 — The library MUST be source-pure.** Sourcing `slash-bash.bash` only declares functions and state. No filesystem mutation, no network, no side effects. The history dir is created lazily on first write (`_sb_ensure_history_dir`, `slash-bash.bash:465-473`). Direct dependency `bash-preexec.sh` is existence-checked before sourcing (`slash-bash.bash:36-43`). (BCS0407.)
 
 **AI-3.4 — The library MUST detect direct execution.** Running `bash slash-bash.bash` inside an interactive shell is a contributor footgun — the chord trick installs into the wrong shell. Source-detection guard at `slash-bash.bash:16-19` exits 1 with diagnostic. The interactive guard at `slash-bash.bash:24` is a *second* gate that makes non-interactive sourcing a no-op.
 
@@ -189,9 +189,9 @@ Aliases are extra keys on `_SB_HANDLERS` (e.g. `_SB_HANDLERS[/h]=_sb_cmd_history
 
 **NFR-6.2.1** — `shellcheck -x` MUST pass clean (exit 0) on all in-tree bash files: `slash-bash`, `slash-bash.bash`, `.slash-bash-init`, `claude-sessions`, and every file under `handlers.d/`. Documented suppressions only, each with an explanatory comment per BCS1202. Vendored `bash-preexec.sh` is exempt.
 
-**NFR-6.2.2** — BCS conformance baseline (post-/rebase audit, see `AUDIT-BASH.md` regenerated via `make audit`):
-- Core errors: zero outstanding. The most recent core finding (BCS0606 missing `||:` in `_sb_pick_newest_uuid`) was fixed in track 5 of the post-/rebase follow-up.
-- Recommended/style warnings deferred with rationale in the audit file: BCS0405 (six unused colour-palette vars), BCS0305 (intentional `printf` format with embedded sigil), BCS0407 (architectural — readline `bind`, `complete`, `preexec_functions+=`, `HISTIGNORE` are the library's purpose).
+**NFR-6.2.2** — BCS conformance baseline (post-audit, see `AUDIT-BASH.md` regenerated via `make audit`; current health score 8.5/10, ~92% on confirmed findings):
+- Core errors: zero outstanding. Two bcscheck-flagged `[ERROR]` findings (BCS0606 on the launcher's `die()` and on the library's `shopt -q nullglob && _sb_was_nullglob=1`) were verified to **not** trigger errexit — the launcher case was reproduced; the library case never runs under `set -e` because the library deliberately omits strict mode (Documented Exemption 1).
+- Recommended/style warnings deferred with rationale in the audit file: BCS0405 (six unused colour-palette vars retained for `$SB_SITE_BASH` consumers), BCS0305 (intentional `printf` format with embedded sigil), BCS0407 (architectural — readline `bind`, `complete`, `preexec_functions+=`, `HISTIGNORE` are the library's purpose).
 Re-run `make audit` after any modification; deviations from this baseline require an audit-doc update.
 
 **NFR-6.2.3** — `claude-sessions` MUST stay shellcheck-clean (exposed via `.symlink` as a top-level CLI; some users invoke it independently of `slash-bash`).
@@ -206,7 +206,7 @@ Re-run `make audit` after any modification; deviations from this baseline requir
 
 ### 6.4 Compatibility
 
-**NFR-6.4.1** — `_sb_spacetime` MUST stay format-synced with `claude.agent`'s `spacetime_string` (lines 68-80 of that script). The sync comment at `slash-bash.bash:184-189` flags the dependency.
+**NFR-6.4.1** — `_sb_spacetime` MUST stay format-synced with `claude.agent`'s `spacetime_string` (lines 68-80 of that script). The sync comment at `slash-bash.bash:193-198` flags the dependency.
 
 **NFR-6.4.2** — The cwd-encoding scheme used by `/sessions` MUST round-trip with whatever Claude Code itself writes to `~/.claude/projects/`. Independent encoding changes are forbidden.
 
@@ -214,15 +214,18 @@ Re-run `make audit` after any modification; deviations from this baseline requir
 
 ## 7. Verification
 
-### 7.1 Static
+### 7.1 Static + automated
 
 ```bash
 shellcheck -x slash-bash slash-bash.bash .slash-bash-init claude-sessions handlers.d/*.bash
 bcscheck slash-bash
 bcscheck slash-bash.bash
+make test                # bats Phase 1 (~234 cases)
+make test-e2e            # bats Phase 2 — PTY-driven chord-trick verification
+make check               # combined lint + test gate
 ```
 
-Both commands should return exit 0 with no findings (modulo the one BCS0201 style-tier warning noted in NFR-6.2.2).
+Both `bcscheck` invocations should return exit 0 with no findings (modulo the style-tier deviations noted in NFR-6.2.2). The bats suite under `tests/` exercises every handler and the dispatcher; `tests/test_helper.bash` strips the three `TEST_SHIM_*` sentinel regions so handlers can be called directly without a real TTY.
 
 ### 7.2 Functional smoke (non-interactive — handlers callable directly)
 
@@ -280,7 +283,6 @@ bash /ai/scripts/claude/slash-bash/slash-bash.bash; echo "expect 1, got $?"
 
 ## 8. Out of Scope (explicit non-requirements)
 
-- **No automated test suite.** Verification is manual smoke testing per §7. Adding a test framework is acceptable future work but not required.
 - **No release automation.** Version is hardcoded in launcher (`VERSION=1.0.0`). No CHANGELOG, no git tags.
 - **No multi-line input.** Each `/cmd` line is a single readline submission. README §"Future hooks" notes this as a possible enhancement.
 - **No streaming output.** `/ask` returns once `claude.agent` exits. Streaming is README-future.
@@ -295,16 +297,18 @@ bash /ai/scripts/claude/slash-bash/slash-bash.bash; echo "expect 1, got $?"
 | File | Role | Lines |
 |---|---|---|
 | `slash-bash` | launcher | 88 |
-| `slash-bash.bash` | sourceable library (the chord trick + registry-driven dispatcher) | ~647 |
-| `.slash-bash-init` | rcfile sourced by `bash --init-file` | ~70 |
-| `handlers.d/_*.bash` | one file per slash-command handler (16 files; 23 registrations including aliases) | ~600 total |
+| `slash-bash.bash` | sourceable library (the chord trick + registry-driven dispatcher) | ~656 |
+| `.slash-bash-init` | rcfile sourced by `bash --init-file` | 71 |
+| `handlers.d/_*.bash` | one file per slash-command handler (16 files; 23 registrations including aliases) | ~611 total |
 | `bash-preexec.sh` | vendored MIT (preexec hooks) | 567 |
-| `claude-sessions` | sibling CLI (`/sessions` delegates to it) | ~80 |
+| `claude-sessions` | sibling CLI (`/sessions` delegates to it) | 82 |
+| `Makefile` | dev workflow targets: `test`, `test-e2e`, `lint`, `audit`, `check` | 39 |
+| `tests/*.bats` | bats suite (~234 cases across ~20 files; `e2e_chord.bats` runs only with `BATS_E2E=1`) | — |
 | `.symlink` | declares which executables are exposed to PATH | 2 entries: `slash-bash`, `claude-sessions` |
 | `README.md` | user-facing tour, "How to extend", limits | ~400 |
 | `CLAUDE.md` | maintainer doc for Claude Code (gitignored) | — |
 | `BASH-CODING-STANDARD.md` | symlink → `/usr/local/share/yatti/BCS/data/` (gitignored) | — |
-| `.gudang/process-llm-command` | preserved abandoned prototype (do not revive) | 31 |
+| `.gudang/process-llm-command` | preserved abandoned prototype (do not revive) | 30 |
 
 ---
 
