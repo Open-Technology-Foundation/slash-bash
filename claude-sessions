@@ -19,8 +19,7 @@ shopt -s inherit_errexit
 declare -r VERSION=1.0.0
 #shellcheck disable=SC2155
 declare -r SCRIPT_PATH=$(realpath -- "${BASH_SOURCE[0]}")
-declare -rx SCRIPT_DIR=${SCRIPT_PATH%/*} SCRIPT_NAME=${SCRIPT_PATH##*/}
-: "$SCRIPT_DIR"  # reserved for future use; silence shellcheck.
+declare -r SCRIPT_NAME=${SCRIPT_PATH##*/}
 
 show_help() {
   cat <<HELP

@@ -19,7 +19,7 @@ declare -rx SCRIPT_NAME=${SCRIPT_PATH##*/}
 declare -r INIT="$SCRIPT_DIR"/.slash-bash-init
 
 die() {
-  local -i ec=${1:-1}; shift ||:
+  local -i ec=${1:-0}; shift ||:
   (($#)) && >&2 printf "$SCRIPT_NAME: %s\n" "$@"
   exit "$ec"
 }
@@ -81,7 +81,7 @@ esac; shift; done
 # .slash-bash-init, because /etc/bash.bashrc runs the profile.d loop BEFORE
 # bash reads --init-file. Lazy load fires on first TAB inside the shell;
 # see slash-bash.bash:__sb_lazy_complete.
-export BASH_COMPLETION_VERSINFO=1
+declare -x BASH_COMPLETION_VERSINFO=1
 
 exec bash --init-file "$INIT" -i
 

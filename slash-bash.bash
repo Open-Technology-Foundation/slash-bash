@@ -99,6 +99,10 @@ declare -gA _SB_COMPLETE=()
 # preferred for new commands.
 declare -ga _SB_SLASH_CMDS=()
 
+# Output buffers for __sb_split_redirect (overwritten on every call).
+declare -g  -- _SB_SPLIT_CMD=''
+declare -g  -- _SB_SPLIT_TAIL=''
+
 # ---------------------------------------------------------------------------
 # Messaging - BCS _msg() pattern, __-prefixed to match _error convention.
 # Single primitive __msg; severity helpers wrap it with sigil+colour. Gating
@@ -111,6 +115,11 @@ declare -ga _SB_SLASH_CMDS=()
 declare -ig _VERBOSE="${SB_VERBOSE:-0}"
 declare -ig _DEBUG="${SB_DEBUG:-0}"
 
+# Extended ANSI palette. In-tree consumers reference _RED/_GREEN/_YELLOW/_CYAN/_NC
+# (via _error/_warn/_info/_success/_debug) and _BOLD (handlers.d/_help.bash).
+# _BLUE, _MAGENTA, _DIM, _ITALIC, _UNDERLINE, _REVERSE are intentionally
+# retained for future handlers.d/ commands and $SB_SITE_BASH site hooks.
+# shellcheck disable=SC2034  # palette retained for future / site-hook consumers
 if [[ -t 1 && -t 2 ]]; then
   declare -gr _RED=$'\033[0;31m'    _GREEN=$'\033[0;32m'   _YELLOW=$'\033[0;33m'
   declare -gr _BLUE=$'\033[0;34m'   _MAGENTA=$'\033[0;35m' _CYAN=$'\033[0;36m'
@@ -136,7 +145,7 @@ _debug()   { ((_DEBUG))   || return 0; __msg "${_RED}⦿${_NC}" "$@"; }
 _vecho()   { ((_VERBOSE)) || return 0; >&2 printf "${_SB_AGENT:-${SCRIPT_NAME:-slash-bash}}: %s\n" "$@"; }
 # _die N MSG... - print error and return N. Uses `return`, not `exit`,
 # because this library is sourced into the user's interactive shell (see
-# the `set -euo pipefail` rationale at line 25-28); `exit` would kill the
+# the `set -euo pipefail` rationale at lines 27-30); `exit` would kill the
 # user's terminal session.
 _die()     { (($# < 2)) || _error "${@:2}"; return "${1:-1}"; }
 
