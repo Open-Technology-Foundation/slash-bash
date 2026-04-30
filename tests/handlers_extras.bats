@@ -143,8 +143,8 @@ teardown() {
   done
 }
 
-@test "_SB_SLASH_CMDS: 23 entries (post-/rebase)" {
-  (( ${#_SB_SLASH_CMDS[@]} == 23 ))
+@test "_SB_SLASH_CMDS: 24 entries (post-/rebase)" {
+  (( ${#_SB_SLASH_CMDS[@]} == 24 ))
 }
 
 # ----------------------------------------------------------------------------

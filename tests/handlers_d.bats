@@ -31,8 +31,8 @@ teardown() {
   done
 }
 
-@test "_SB_HANDLERS: 23 entries match prior _SB_SLASH_CMDS invariant" {
-  (( ${#_SB_HANDLERS[@]} == 23 ))
+@test "_SB_HANDLERS: 24 entries match prior _SB_SLASH_CMDS invariant" {
+  (( ${#_SB_HANDLERS[@]} == 24 ))
 }
 
 @test "_SB_HANDLERS: bare '/' is NOT a key (special-cased in dispatcher)" {
@@ -138,11 +138,11 @@ teardown() {
 # First-word completion uses the registry
 # ----------------------------------------------------------------------------
 
-@test "_sb_complete_first: '/' offers all 23 registered commands" {
+@test "_sb_complete_first: '/' offers all 24 registered commands" {
   COMP_WORDS=(/)
   COMP_CWORD=0
   _sb_complete_first
-  (( ${#COMPREPLY[@]} == 23 ))
+  (( ${#COMPREPLY[@]} == 24 ))
 }
 
 @test "_sb_complete_first: '/h' filters to /h, /help, /history" {
