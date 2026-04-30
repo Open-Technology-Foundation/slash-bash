@@ -1,0 +1,88 @@
+#!/usr/bin/bash
+# slash-bash - launcher that starts an isolated interactive bash with the
+# slash-bash library loaded. Does not modify the user's normal shell.
+#
+# Usage:
+#   slash-bash                  open the isolated bash
+#   slash-bash -V|--version     print version and exit
+#   slash-bash -h|--help        print usage and exit
+
+set -euo pipefail
+shopt -s inherit_errexit
+
+declare -r  VERSION=1.0.0
+#shellcheck disable=SC2155
+declare -r  SCRIPT_PATH=$(realpath -- "${BASH_SOURCE[0]}")
+declare -r  SCRIPT_DIR=${SCRIPT_PATH%/*}
+declare -rx SCRIPT_NAME=${SCRIPT_PATH##*/}
+
+declare -r INIT="$SCRIPT_DIR"/.slash-bash-init
+
+die() {
+  local -i ec=${1:-1}; shift ||:
+  (($#)) && >&2 printf "$SCRIPT_NAME: %s\n" "$@"
+  exit "$ec"
+}
+
+show_help() {
+  cat <<HELP
+$SCRIPT_NAME $VERSION - interactive bash with /command interception
+
+Usage:
+  $SCRIPT_NAME                  open the isolated shell
+  $SCRIPT_NAME -V, --version    print version and exit
+  $SCRIPT_NAME -h, --help       print this help and exit
+
+Behaviour:
+  Lines beginning with "/" are intercepted at the readline layer and
+  routed to internal handlers; everything else runs as vanilla bash.
+  Type /help inside the shell for the slash-command reference.
+
+Environment:
+  SB_AGENT, SB_MODEL          initial agent/model (leet, claude-opus-4-7)
+  SB_KB_LIST                  curated KB menu (else discovered from \$VECTORDBS)
+  SB_MAX_TOKENS               initial CLAUDE_CODE_MAX_OUTPUT_TOKENS (32000)
+  SB_OLLAMA                   initial Ollama-on flag (0)
+  SB_HISTORY_FILE             history log (default under \$XDG_CACHE_HOME)
+  SB_SITE_BASH                per-host extension hook (under \$XDG_CONFIG_HOME)
+  VECTORDBS                   KB filesystem root (/var/lib/vectordbs)
+  AGENTS_JSON                 agent registry (/ai/scripts/claude/agents/Agents.json)
+  SB_CLAUDE_PROJECTS_DIR      Claude Code sessions dir (\$HOME/.claude/projects)
+  DEBUG                       non-empty: keep dispatcher form visible in history
+
+Exit codes:
+  0    success
+  2    unexpected argument (BCS ERR_USAGE)
+  3    init file missing
+  22   invalid option (BCS ERR_INVAL)
+
+See also:
+  /help (inside the shell)    in-shell slash-command reference
+  README.md                   user-facing tour and full reference
+  REQUIREMENTS.md             as-built spec and verification recipes
+HELP
+}
+
+# Every case arm below exits, so `shift; done` is unreachable but required
+# syntactically. SC2317 flags this; suppression is precise to the construct.
+# shellcheck disable=SC2317
+while (($#)); do case $1 in
+  -V|--version) printf '%s %s\n' "$SCRIPT_NAME" "$VERSION"; exit 0 ;;
+  -h|--help)    show_help; exit 0 ;;
+  -*) die 22 "invalid option ${1@Q}" ;;
+  *)  die  2 "unexpected argument ${1@Q}" ;;
+esac; shift; done
+
+[[ -f $INIT ]] || die 3 "init file missing ${INIT@Q}"
+
+# Suppress eager load of /usr/share/bash-completion/bash_completion (~586 ms)
+# triggered by /etc/profile.d/bash_completion.sh. The guard there short-
+# circuits when this var is already set. Must be exported here, not in
+# .slash-bash-init, because /etc/bash.bashrc runs the profile.d loop BEFORE
+# bash reads --init-file. Lazy load fires on first TAB inside the shell;
+# see slash-bash.bash:__sb_lazy_complete.
+export BASH_COMPLETION_VERSINFO=1
+
+exec bash --init-file "$INIT" -i
+
+#fin

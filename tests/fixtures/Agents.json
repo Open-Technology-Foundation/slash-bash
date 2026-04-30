@@ -1,0 +1,11 @@
+{
+  "leet - elite full-stack programmer and AI systems engineer": {
+    "systemprompt": "You are leet. Today is {{spacetime}}. Write clean code."
+  },
+  "haiku - poetry assistant": {
+    "systemprompt": "You write haiku at {{spacetime}}."
+  },
+  "noprompt - placeholder agent without systemprompt": {
+    "description": "no systemprompt key"
+  }
+}

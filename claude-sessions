@@ -1,0 +1,83 @@
+#!/usr/bin/bash
+# claude-sessions - list Claude Code sessions for the current working
+# directory.
+#
+# Output: TSV (mtime<TAB>uuid<TAB>title), newest first. UUIDs are accepted
+# by `claude --resume <uuid>`.
+#
+# Reads `~/.claude/projects/<encoded-cwd>/*.jsonl`, where <encoded-cwd> is
+# the cwd with `/` replaced by `-` - matches Claude Code's own scheme.
+# Title resolution: last `custom-title` record wins; falls back to the
+# first user message truncated to 80 chars; final fallback is `<untitled>`.
+#
+# Used directly by the user, and by slash-bash's `/sessions` handler
+# (which is a thin exec wrapper around this script).
+
+set -euo pipefail
+shopt -s inherit_errexit
+
+declare -r VERSION=1.0.0
+#shellcheck disable=SC2155
+declare -r SCRIPT_PATH=$(realpath -- "${BASH_SOURCE[0]}")
+declare -rx SCRIPT_DIR=${SCRIPT_PATH%/*} SCRIPT_NAME=${SCRIPT_PATH##*/}
+: "$SCRIPT_DIR"  # reserved for future use; silence shellcheck.
+
+show_help() {
+  cat <<HELP
+$SCRIPT_NAME $VERSION [-V|--version] [-h|--help]
+
+usage: $SCRIPT_NAME [-V|--version] [-h|--help]
+
+  List Claude Code sessions for the current working directory as TSV:
+    <mtime>\\t<uuid>\\t<title>
+  newest first. UUIDs can be passed to \`claude --resume <uuid>\`.
+
+  Reads ~/.claude/projects/<encoded-cwd>/*.jsonl.
+
+  Exit codes:
+    0   sessions listed (or none — but the directory exists)
+    2   unknown option
+    3   no session directory for the current cwd
+    18  jq not found in PATH
+HELP
+}
+
+main() {
+  case ${1:-} in
+    -V|--version) printf '%s %s\n' "$SCRIPT_NAME" "$VERSION"; return 0 ;;
+    -h|--help)    show_help; return 0 ;;
+    '') ;;
+    *) >&2 printf '%s: unknown option: %q\n' "$SCRIPT_NAME" "$1"; return 2 ;;
+  esac
+
+  local -- root=${SB_CLAUDE_PROJECTS_DIR:-$HOME/.claude/projects}
+  local -- dir=$root/${PWD//\//-}
+  if [[ ! -d $dir ]]; then
+    >&2 printf 'no sessions for %s\n' "$PWD"
+    return 3
+  fi
+  if ! command -v jq >/dev/null; then
+    >&2 printf 'jq not in PATH\n'
+    return 18
+  fi
+
+  local -- f uuid title mtime
+  for f in "$dir"/*.jsonl; do
+    [[ -f $f ]] || continue
+    uuid=${f##*/}; uuid=${uuid%.jsonl}
+    # Last custom-title record wins (titles get rewritten over a session).
+    title=$(jq -r 'select(.type=="custom-title") | .customTitle' "$f" 2>/dev/null | tail -n1)
+    # Fallback: first user message, truncated to 80 chars.
+    if [[ -z $title ]]; then
+      title=$(jq -r 'select(.type=="user") | .message.content | tostring' "$f" 2>/dev/null \
+              | head -n1 | cut -c1-80)
+      title=${title:-<untitled>}
+    fi
+    mtime=$(date -r "$f" '+%Y-%m-%d %H:%M:%S')
+    printf '%s\t%s\t%s\n' "$mtime" "$uuid" "$title"
+  done | sort -r
+}
+
+main "$@"
+
+#fin

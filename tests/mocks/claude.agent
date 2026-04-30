@@ -1,0 +1,40 @@
+#!/usr/bin/bash
+# Mock claude.agent for slash-bash tests.
+# Branches on $MOCK_CLAUDE_AGENT_KIND; logs invocation to $MOCK_CLAUDE_AGENT_LOG.
+set -euo pipefail
+
+declare -- log=${MOCK_CLAUDE_AGENT_LOG:-/dev/null}
+printf '%s\n' "$*" >> "$log"
+
+case ${MOCK_CLAUDE_AGENT_KIND:-list-good} in
+  list-good)
+    if [[ ${1:-} == --list ]]; then
+      printf 'leet\nhaiku\nopus\n'
+      exit 0
+    fi
+    ;;
+  list-noisy)
+    # ANSI escapes + duplicate entry (tests sed-strip + sort -u in loader).
+    if [[ ${1:-} == --list ]]; then
+      printf '\e[31mleet\e[0m  desc-line-with-extra-cols\n'
+      printf 'haiku  desc\n'
+      printf 'leet  duplicate\n'
+      exit 0
+    fi
+    ;;
+  list-empty)
+    if [[ ${1:-} == --list ]]; then
+      exit 0
+    fi
+    ;;
+  fail)
+    exit 1
+    ;;
+  passthrough)
+    # /ask path: just echo the assembled argv so tests can grep it.
+    printf '%s\n' "$*"
+    exit 0
+    ;;
+esac
+
+exit 0

@@ -1,0 +1,44 @@
+# Claude Code
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+BASH-CODING-STANDARD.md
+AUDIT-*.md
+BIRDS-EYE-*.md
+PURPOSE-FUNCTIONALITY-USAGE.md
+do-a-*.md
+.gudang/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+.venv/
+.env
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# PHP
+vendor/
+
+# Node
+node_modules/
+
+# Temporary and backup files
+*~
+*.bak
+*.old
+*.tmp
+.cache/
+
+# IDE
+.vscode/
+.idea/
+
+#fin

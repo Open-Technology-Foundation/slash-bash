@@ -1,0 +1,71 @@
+#!/usr/bin/bash
+#shellcheck shell=bash
+# .slash-bash-init - rcfile sourced by the slash-bash launcher.
+# Inherits the user's normal interactive setup, then loads the slash-bash
+# library, then sets PS1 to embed the active agent name so it's obvious
+# which shell you're in.
+#
+# Sourced via: bash --init-file <this-file>
+
+# Mirror the launcher's BASH_COMPLETION_VERSINFO=1. The load-bearing export
+# is in the launcher (set BEFORE `exec bash`) - by the time this rcfile
+# runs, /etc/bash.bashrc has already iterated /etc/profile.d/*.sh and the
+# eager-load decision has been made. This re-export is an idempotent
+# safety net so the var stays set in any subshell spawned after init.
+# The library re-enables loading lazily on first TAB via a `complete -D`
+# stub returning 124. See slash-bash.bash:__sb_lazy_complete.
+export BASH_COMPLETION_VERSINFO=1
+
+# Inherit the user's environment if present.
+# shellcheck source=/dev/null
+[[ ! -f "$HOME"/.bashrc ]] || source "$HOME"/.bashrc
+
+# Provisional PS1 - applied AFTER sourcing ~/.bashrc and mirrors
+# /etc/bash.bashrc's TERM-conditional prompt verbatim (colour for
+# xterm-color/*-256color, plain otherwise). The slash-bash-aware PS1
+# below overwrites this once the library has loaded; keeping it here
+# leaves a deterministic baseline if a downstream change ever skips the
+# overwrite block.
+declare -i _sb_color_prompt=0
+case ${TERM:-} in
+  xterm-color|*-256color) _sb_color_prompt=1 ;;
+esac
+if ((_sb_color_prompt)); then
+  PS1="\[\e]0;\u@\h: \w\a\]"                    # Terminal title
+  PS1+="\[\033[38;5;8m\]\$?:"                   # Exit code (gray)
+  PS1+="\[\033[00m\]\[\033[01;34m\]\w"          # Path (blue)
+  PS1+="\[\033[00m\]:\[\033[01;32m\]\u@\h"      # User@host (green)
+  PS1+="\[\033[00m\]\n\\$ "                     # Newline and prompt
+else
+  if [[ -z ${debian_chroot:-} && -r /etc/debian_chroot ]]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+  fi
+  PS1='$?:${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
+fi
+unset -v _sb_color_prompt
+
+# Load the slash-bash library from this file's directory.
+__SB_DIR=$(dirname -- "${BASH_SOURCE[0]}")
+# shellcheck source=slash-bash.bash
+source "$__SB_DIR"/slash-bash.bash
+unset __SB_DIR
+
+# Build PS1 to embed the current agent name so the prompt reflects the
+# active agent (and updates when /agent switches it). Overwrites the
+# provisional PS1 above. Falls back through SCRIPT_NAME to the literal
+# "slash-bash" if neither is set. Colour escapes are inlined directly
+# (\e[...]) - this block does not depend on any sourced colour vars.
+declare -x PROMPT_DIRTRIM=${PROMPT_DIRTRIM:-3}
+PS1='\[\e]0;\u@\h: \w\a\]'                 # xterm title (no color)
+PS1+='\[\e[2m\]$?\[\e[0m\] '               # dim exit code
+PS1+='\[\e[1;32m\]\u@\h\[\e[2m\]:'         # bold-green user@host
+PS1+='\[\e[0;1;34m\]\w'                    # bold-blue cwd
+PS1+='\[\e[0;2;3m\] ╱ ${_SB_AGENT:-${SCRIPT_NAME:-slash-bash}}\[\e[0m\]'
+PS1+='\n\$ '
+export PS1
+
+# Force claude code to use OAUTH not API; set to 0 if not using OAUTH
+export CLAUDE_CODE_USE_OAUTH=${CLAUDE_CODE_USE_OAUTH:-1}
+((CLAUDE_CODE_USE_OAUTH==0)) || unset ANTHROPIC_API_KEY
+
+#fin
