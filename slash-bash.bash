@@ -61,6 +61,11 @@ declare -ig    _SB_MAX_TOKENS="${SB_MAX_TOKENS:-32000}"
 declare -ig    _SB_OLLAMA="${SB_OLLAMA:-0}"
 declare -g  -- _SB_HISTORY_FILE="${SB_HISTORY_FILE:-${XDG_CACHE_HOME:-$HOME/.cache}/slash-bash/history}"
 declare -g  -- _SB_LAST_ORIGINAL=''
+# Captured rendered prompt (${PS1@P}) at intercept time, used by
+# _sb_redraw_original to reprint exactly what the user saw - re-expanding
+# PS1 in preexec would yield stale prompt fields (\!, \T, \@) that drift
+# by one between Enter and exec.
+declare -g  -- _SB_LAST_PROMPT=''
 # History dir is created lazily on first write (see _sb_log_dispatch) so
 # sourcing this library does not mutate the filesystem.
 
@@ -441,6 +446,17 @@ __sb_intercept() {
   [[ $line =~ ^[[:space:]]*/ ]] || return 0
 
   _SB_LAST_ORIGINAL=$line
+  # ${PS1@P} expands prompt escapes but preserves the \[ \] non-printing
+  # markers as \001 \002. Readline consumes those internally; if we echo
+  # them back via printf, terminals see literal SOH/STX. Strip both.
+  _SB_LAST_PROMPT=${PS1@P}
+  _SB_LAST_PROMPT=${_SB_LAST_PROMPT//$'\001'/}
+  _SB_LAST_PROMPT=${_SB_LAST_PROMPT//$'\002'/}
+  # Multi-line PS1: bind -x's redisplay only repainted the LAST row of the
+  # prompt block (the row that carried the cursor). Rows above are still
+  # on screen, untouched. Keep only the segment after the final newline so
+  # the redraw replaces the rewrite row alone, not the whole prompt block.
+  _SB_LAST_PROMPT=${_SB_LAST_PROMPT##*$'\n'}
   # Push the original to readline history so up-arrow recalls it as typed.
   history -s -- "$line"
   # Quote-aware split: keep redirection / pipe / sequence in the tail so
@@ -478,8 +494,13 @@ _sb_ensure_history_dir() {
 # disk in plaintext. Set SB_LOG_ARGS=1 to record the full original line
 # (the legacy behaviour); the file is still 0600-mode in either case.
 _sb_log_dispatch() {
-  local -- cmd=$1
-  [[ $cmd == __sb_dispatch* ]] || return 0
+  # bash-preexec passes the command from `history 1`, not BASH_COMMAND -
+  # and __sb_intercept pushes the original `/cmd' line via `history -s'
+  # so up-arrow recalls as typed. So $1 is the user-facing slash line,
+  # NOT the rewritten "__sb_dispatch '...'" form. Gate purely on
+  # _SB_LAST_ORIGINAL being set: __sb_intercept sets it only for lines
+  # matching ^[[:space:]]*/ and this function clears it, so non-empty
+  # means "the most recent dispatch was ours and has not been logged yet".
   [[ -n $_SB_LAST_ORIGINAL ]] || return 0
   _sb_ensure_history_dir
   local -- payload
@@ -491,8 +512,34 @@ _sb_log_dispatch() {
   printf '%s\t%s\n' "$(_sb_iso_now)" "$payload" \
     >> "$_SB_HISTORY_FILE"
   _SB_LAST_ORIGINAL=''
+  _SB_LAST_PROMPT=''
 }
-preexec_functions+=(_sb_log_dispatch)
+
+# Hide the dispatcher rewrite from the terminal. After accept-line submits
+# the rewritten "__sb_dispatch '<original>'" form, the cursor is on the
+# row below; move up, clear, and reprint the captured prompt + original
+# /cmd so the user sees what they typed, not the chord-rewrite. Gated on
+# DEBUG (same convention as the HISTIGNORE patch) so setting DEBUG=1
+# keeps both the readline-history rewrite and the visible rewrite intact
+# for debugging the chord trick.
+_sb_redraw_original() {
+  # See _sb_log_dispatch for why we gate on _SB_LAST_ORIGINAL rather than
+  # matching $1 against "__sb_dispatch*": bash-preexec passes the history
+  # form (the user's original "/cmd" line), never the rewritten dispatch.
+  [[ -n $_SB_LAST_ORIGINAL ]] || return 0
+  [[ -z ${DEBUG:-} ]] || return 0
+  # \033[1A cursor up 1; \r column 0; \033[K erase to EOL. Write to
+  # /dev/tty rather than stdout so a redirected dispatch like
+  # "/help > file" still gets its prompt line restored - bash applies
+  # the dispatch's redirection to the simple command, and at preexec
+  # time fd 1 may already be the redirect target rather than the
+  # terminal. The 2>/dev/null swallows the no-tty edge (interactive
+  # guard at top of file makes this practically unreachable).
+  printf '\033[1A\r\033[K%s%s\n' "$_SB_LAST_PROMPT" "$_SB_LAST_ORIGINAL" \
+    > /dev/tty 2>/dev/null
+}
+# Order matters: redraw reads _SB_LAST_ORIGINAL, log clears it.
+preexec_functions+=(_sb_redraw_original _sb_log_dispatch)
 
 # ---------------------------------------------------------------------------
 # Per-command handler files. Each handlers.d/_*.bash defines its
