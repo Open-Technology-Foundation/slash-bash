@@ -47,8 +47,11 @@ Available slash commands:
                    List Claude Code sessions for the current cwd
                    (TSV: mtime, uuid, title). UUID is \`claude --resume\`-able.
   $_BOLD/filemanager$_NC || $_BOLD/fm$_NC [<dirpath>]
-                   Launch GUI file manager (xdg-open) on dirpath or \$PWD.
-                   -n / --dry-run prints what would launch.
+                   Launch file manager on dirpath or \$PWD. Auto-detect:
+                   GUI (xdg-open, detached) when \$DISPLAY/\$WAYLAND_DISPLAY
+                   set, else TUI (\$SB_FILEMANAGER, mc, ranger, nnn, lf, vifm).
+                   -g/--gui / -t/--tui force the mode; -n/--dry-run prints
+                   what would launch.
   $_BOLD/rebase$_NC [--force]
                    Bind active conversation to \$PWD's most-recent JSONL
                    (auto-pick). Prompts if current binding has recent /ask

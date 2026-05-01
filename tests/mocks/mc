@@ -1,0 +1,11 @@
+#!/usr/bin/bash
+# Mock mc (Midnight Commander) for slash-bash tests.
+# Logs the path it was asked to open to $MOCK_MC_LOG (if set) and
+# exits 0. The real mc would take over the terminal; the mock just
+# records the invocation so tests can assert the TUI-mode launch.
+set -euo pipefail
+
+declare -- log=${MOCK_MC_LOG:-/dev/null}
+printf '%s\n' "$*" >> "$log"
+
+#fin

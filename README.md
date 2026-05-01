@@ -164,6 +164,7 @@ layout on `okusi`, so unsetting all of them yields the original behaviour.
 | `SB_CLAUDE_PROJECTS_DIR` | `$HOME/.claude/projects` | Where Claude Code stores per-cwd JSONL sessions. Read by `/sessions` and `claude-sessions`. |
 | `SB_SITE_BASH` | `${XDG_CONFIG_HOME:-$HOME/.config}/slash-bash/site.bash` | Optional per-site extension file sourced at end of init. See [How to extend](#how-to-extend). |
 | `AGENTS_JSON` | derived from `claude.agent` in PATH | Path to the agent registry. Read by `/systemprompt`. |
+| `SB_FILEMANAGER` | _(unset; uses default probe order)_ | Preferred TUI file manager binary; tried before `mc`, `ranger`, `nnn`, `lf`, `vifm`. Read by `/filemanager`. |
 
 ### Pass-through to other tools
 
