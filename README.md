@@ -59,7 +59,7 @@ re-implementing fragile DEBUG-trap plumbing.
 ## Install / run
 
 ```bash
-cd /ai/scripts/claude/slash-bash
+cd <slash-bash repo>
 sudo symlink -S .          # exposes the launcher to /usr/local/bin
 slash-bash                # opens an isolated interactive bash
 ```
@@ -163,7 +163,7 @@ layout on `okusi`, so unsetting all of them yields the original behaviour.
 | `SB_HISTORY_FILE` | `${XDG_CACHE_HOME:-$HOME/.cache}/slash-bash/history` | Slash-invocation log path. Parent dir is auto-created. |
 | `SB_CLAUDE_PROJECTS_DIR` | `$HOME/.claude/projects` | Where Claude Code stores per-cwd JSONL sessions. Read by `/sessions` and `claude-sessions`. |
 | `SB_SITE_BASH` | `${XDG_CONFIG_HOME:-$HOME/.config}/slash-bash/site.bash` | Optional per-site extension file sourced at end of init. See [How to extend](#how-to-extend). |
-| `AGENTS_JSON` | `/ai/scripts/claude/agents/Agents.json` | Path to the agent registry. Read by `/systemprompt`. |
+| `AGENTS_JSON` | derived from `claude.agent` in PATH | Path to the agent registry. Read by `/systemprompt`. |
 
 ### Pass-through to other tools
 
@@ -273,7 +273,7 @@ directory itself.
 | Dependency | Used by | Source / project | Behaviour if absent |
 |------------|---------|------------------|---------------------|
 | `jq`           | `/systemprompt`, `/sessions` | https://github.com/jqlang/jq | `/systemprompt` prints `jq not in PATH` and returns 1. `/sessions` delegates to `claude-sessions`, which prints the same message and returns 18 (BCS `ERR_NODEP`). |
-| `claude.agent` | `/ask`, `/agents`, `/agent`, `/systemprompt` | Okusi internal — `/ai/scripts/claude/agents/claude.agent` | Those commands print `claude.agent not in PATH`; the rest of the shell still works. |
+| `claude.agent` | `/ask`, `/agents`, `/agent`, `/systemprompt` | Okusi internal — must be in PATH (alongside its `Agents.json` registry) | Those commands print `claude.agent not in PATH`; the rest of the shell still works. |
 | `claude-sessions` | `/sessions` | This project (sibling script in the slash-bash dir, also installed to PATH via `.symlink`) | `/sessions` prints `claude-sessions not found or not executable` and returns 18. |
 | Claude Code CLI (`claude`) | `/sessions` (UUIDs are passed to `claude --resume`) | https://github.com/anthropics/claude-code | `/sessions` only *reads* `~/.claude/projects/<…>/*.jsonl`; running the CLI is left to the user. |
 | Ollama | `/ollama`, `/ask -O` | https://github.com/ollama/ollama | Only invoked indirectly by `claude.agent -O`. Toggled-on but missing → `claude.agent` will report it. |

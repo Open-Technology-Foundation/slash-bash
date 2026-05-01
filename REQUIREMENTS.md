@@ -1,4 +1,4 @@
-# Requirements — Bash++ slash-bash (`/ai/scripts/claude/slash-bash/`)
+# Requirements — Bash++ slash-bash
 
 ## Context
 
@@ -138,7 +138,7 @@ All start with `_SB_` prefix. Initial values come from like-named env vars (`SB_
 | Path | Override | Used by |
 |---|---|---|
 | `$VECTORDBS/<name>/<name>.cfg` | `VECTORDBS` | `/kb`, `/kbs`, `/ask` |
-| `Agents.json` | `AGENTS_JSON` (default `/ai/scripts/claude/agents/Agents.json`) | `/systemprompt` |
+| `Agents.json` | `AGENTS_JSON` (default: derived from `claude.agent` in PATH) | `/systemprompt` |
 | `~/.claude/projects/<encoded-cwd>/*.jsonl` | `SB_CLAUDE_PROJECTS_DIR` | `/sessions`, `claude-sessions` |
 | `$_SB_HISTORY_FILE` | `SB_HISTORY_FILE` | history logger |
 | `$_SB_SITE_BASH` | `SB_SITE_BASH` | end-of-init extension hook |
@@ -230,8 +230,9 @@ Both `bcscheck` invocations should return exit 0 with no findings (modulo the st
 ### 7.2 Functional smoke (non-interactive — handlers callable directly)
 
 ```bash
+# Run from the slash-bash repo root.
 [[ $- != *i* ]] && exec bash -i "$0" "$@"
-source /ai/scripts/claude/slash-bash/slash-bash.bash 2>/dev/null
+source ./slash-bash.bash 2>/dev/null
 _sb_cmd_maxtokens 0           # expect: usage error, rc=1
 _sb_cmd_ollama                # expect: model=<default>
 _sb_cmd_kb '../../etc/passwd' # expect: invalid kb name, rc=1
@@ -256,7 +257,7 @@ The chord trick only fires under a real TTY; piping commands into stdin will not
 ```bash
 TMPDIR=$(mktemp -d); export TMPDIR
 SB_HISTORY_FILE=$TMPDIR/sub/history bash -i -c '
-  source /ai/scripts/claude/slash-bash/slash-bash.bash
+  source ./slash-bash.bash
   [[ -d $TMPDIR/sub ]] && echo "FAIL: dir created on source" || echo "ok"
   _SB_LAST_ORIGINAL=/test
   _sb_log_dispatch "__sb_dispatch /test"
@@ -267,7 +268,7 @@ SB_HISTORY_FILE=$TMPDIR/sub/history bash -i -c '
 ### 7.5 Direct-execution rejection
 
 ```bash
-bash /ai/scripts/claude/slash-bash/slash-bash.bash; echo "expect 1, got $?"
+bash ./slash-bash.bash; echo "expect 1, got $?"
 ```
 
 ### 7.6 Launcher arg parser

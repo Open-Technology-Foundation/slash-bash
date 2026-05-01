@@ -102,6 +102,20 @@ teardown() {
   refute_output --partial "OLLAMA_MODEL"
 }
 
+@test "/status: omits AGENTS_JSON when unset (next session auto-derives)" {
+  # Previously _sb_cmd_status seeded AGENTS_JSON to a hardcoded path so
+  # it was always emitted. The new contract: emit only if the user has
+  # AGENTS_JSON set externally, otherwise omit and let the next session's
+  # _sb_default_agents_json discover from claude.agent in PATH.
+  unset AGENTS_JSON
+  run _sb_cmd_status
+  assert_success
+  refute_output --partial "export AGENTS_JSON"
+  # Sanity: the rest of the always-emitted set still appears.
+  assert_output --partial "export SB_AGENT="
+  assert_output --partial "export VECTORDBS="
+}
+
 # ----------------------------------------------------------------------------
 # @Q quoting round-trips embedded whitespace
 # ----------------------------------------------------------------------------

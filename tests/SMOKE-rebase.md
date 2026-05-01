@@ -40,7 +40,7 @@ UUID_A=$SB_SESSION_UUID
 ## Recipe
 
 ```text
-1.  cd /ai/scripts/claude/slash-bash
+1.  cd <slash-bash repo>
 2.  slash-bash                                # PS1 becomes "[<agent>] $ "
 3.  /status                                  # _SB_SESSION_CWD=$PWD,
                                              # _SB_SESSION_UUID=''
@@ -58,7 +58,7 @@ UUID_A=$SB_SESSION_UUID
 11. /ask 'reply with token CWD-tmp'          # writes new JSONL
                                              # under -tmp/
 12. UUID_T=$_SB_SESSION_UUID; echo "$UUID_T" # capture; non-empty, != UUID_A
-13. cd -                                     # back to /ai/scripts/claude/slash-bash
+13. cd -                                     # back to slash-bash repo
 14. /rebase                                  # may warn dirty;
                                              # picks $UUID_A
 15. /ask 'recall my first token'             # should reply CWD-A
@@ -106,7 +106,7 @@ honours the restored UUID end-to-end.
 ### Recipe
 
 ```text
-1.  cd /ai/scripts/claude/slash-bash
+1.  cd <slash-bash repo>
 2.  slash-bash
 3.  /ask 'reply with the literal token ROUNDTRIP-OK'
 4.  /status > /tmp/sc-state.sh

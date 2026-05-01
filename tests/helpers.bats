@@ -59,4 +59,39 @@ teardown() {
   assert_output --partial 'haiku - poetry assistant'
 }
 
+# ----------------------------------------------------------------------------
+# _sb_default_agents_json - derives Agents.json path from claude.agent in
+# PATH; consumers fall back to it when AGENTS_JSON is unset.
+# ----------------------------------------------------------------------------
+
+@test "default_agents_json: derives path from claude.agent in PATH" {
+  # enable_mocks puts $MOCK_DIR/claude.agent first in PATH; realpath
+  # resolves to the regular file, so the derived path is sibling to it.
+  run _sb_default_agents_json
+  assert_success
+  assert_output "$MOCK_DIR/Agents.json"
+}
+
+@test "default_agents_json: empty when claude.agent missing from PATH" {
+  disable_mocks
+  # Sanitise PATH so the real /usr/local/bin/claude.agent (deployed on
+  # this dev host via .symlink) isn't found either - we want the genuine
+  # "not in PATH" branch to fire.
+  PATH=/usr/bin:/bin run _sb_default_agents_json
+  assert_success
+  [[ -z $output ]] || { printf 'expected empty, got: %s\n' "$output" >&2; false; }
+}
+
+@test "default_agents_json: empty exit 0 (callers chain via :- with no error)" {
+  disable_mocks
+  PATH=/usr/bin:/bin
+  # Idiomatic call site: ${AGENTS_JSON:-$(_sb_default_agents_json)}.
+  # Helper must succeed even when it returns nothing, otherwise set -e
+  # in callers would explode on the empty default.
+  local -- result
+  result=$(_sb_default_agents_json)
+  (( $? == 0 ))
+  [[ -z $result ]]
+}
+
 #fin

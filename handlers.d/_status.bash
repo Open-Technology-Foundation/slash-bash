@@ -8,7 +8,11 @@
 # globals.
 
 _sb_cmd_status() {
-  : "${AGENTS_JSON:=/ai/scripts/claude/agents/Agents.json}"
+  # AGENTS_JSON is intentionally NOT seeded here: the library and handlers
+  # auto-derive the path from claude.agent in PATH (see
+  # _sb_default_agents_json). If the user explicitly set AGENTS_JSON in
+  # their env, the always-emitted loop below picks it up via [[ -v ]];
+  # otherwise we let the next session re-run discovery.
   : "${SB_CLAUDE_PROJECTS_DIR:=$HOME/.claude/projects}"
   # Map: internal-var -> exported-env-var. Always-emitted vars first;
   # the tail (SB_KB_LIST, OLLAMA_MODEL) emit only when set.

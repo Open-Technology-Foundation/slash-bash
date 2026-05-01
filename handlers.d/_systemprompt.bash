@@ -28,7 +28,7 @@ _sb_cmd_systemprompt() {
     _error "agent not found in Agents.json: ${short@Q}"
     return 1
   fi
-  local -r agents_json=${AGENTS_JSON:-/ai/scripts/claude/agents/Agents.json}
+  local -r agents_json=${AGENTS_JSON:-$(_sb_default_agents_json)}
   local -- prompt=''
   prompt=$(jq -r --arg k "$key" '.[$k].systemprompt // empty' "$agents_json")
   if [[ -z $prompt ]]; then

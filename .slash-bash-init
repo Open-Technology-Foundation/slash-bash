@@ -60,7 +60,7 @@ PS1='\[\e]0;\u@\h: \w\a\]'                 # xterm title (no color)
 PS1+='\[\e[2m\]$?\[\e[0m\] '               # dim exit code
 PS1+='\[\e[1;32m\]\u@\h\[\e[2m\]:'         # bold-green user@host
 PS1+='\[\e[0;1;34m\]\w'                    # bold-blue cwd
-PS1+='\[\e[0;2;3m\] ╱ ${_SB_AGENT:-${SCRIPT_NAME:-slash-bash}}\[\e[0m\]'
+PS1+='\[\e[0;2;3m\] ╱${_SB_AGENT:-${SCRIPT_NAME:-slash-bash}}\[\e[0m\]'
 PS1+='\n\$ '
 export PS1
 

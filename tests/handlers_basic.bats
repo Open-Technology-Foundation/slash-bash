@@ -32,9 +32,27 @@ teardown() {
 }
 
 @test "/help: dispatched via /?" {
+  # /? routes to _sb_cmd_help_short (separate handler since the
+  # short/full split). Both forms still print the leader line, so this
+  # test stays valid as a dispatch-routing smoke.
   run __sb_dispatch '/?'
   assert_success
   assert_output --partial "Available slash commands"
+}
+
+@test "/?: short help is distinct from /help and shorter" {
+  # Direct call - exercises _sb_cmd_help_short specifically.
+  local -- short_out full_out
+  short_out=$(_sb_cmd_help_short)
+  full_out=$(_sb_cmd_help)
+  # Both contain the header.
+  [[ $short_out == *"Available slash commands"* ]]
+  [[ $full_out  == *"Available slash commands"* ]]
+  # Short form omits the per-command descriptions that full form carries.
+  [[ $full_out  == *"Send a LLM query"* ]]
+  [[ $short_out != *"Send a LLM query"* ]]
+  # Short < full in line count.
+  (( $(printf '%s\n' "$short_out" | wc -l) < $(printf '%s\n' "$full_out" | wc -l) ))
 }
 
 # ----------------------------------------------------------------------------

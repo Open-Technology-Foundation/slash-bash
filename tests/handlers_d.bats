@@ -43,8 +43,10 @@ teardown() {
 # Alias parity - aliases route to the same handler as their canonical form.
 # ----------------------------------------------------------------------------
 
-@test "alias parity: /? routes to _sb_cmd_help" {
-  [[ ${_SB_HANDLERS['/?']} == "${_SB_HANDLERS[/help]}" ]]
+@test "distinct handlers: /help (full) and /? (short) route to separate fns" {
+  [[ ${_SB_HANDLERS[/help]}   == _sb_cmd_help ]]
+  [[ ${_SB_HANDLERS['/?']}    == _sb_cmd_help_short ]]
+  [[ ${_SB_HANDLERS[/help]}   != "${_SB_HANDLERS['/?']}" ]]
 }
 
 @test "alias parity: /h routes to _sb_cmd_history" {

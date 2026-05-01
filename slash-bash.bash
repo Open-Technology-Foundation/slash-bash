@@ -52,8 +52,7 @@ declare -ga    _SB_AGENT_LIST=()               # populated lazily by _sb_load_ag
 declare -g  -- _SB_MODEL="${SB_MODEL:-claude-opus-4-7}"
 declare -ga    _SB_MODEL_LIST
 read -r -a _SB_MODEL_LIST <<<"${SB_MODEL_LIST:-claude-opus-4-7 claude-opus-4-6 claude-sonnet-4-6 claude-haiku-4-6}"
-# VECTORDBS is the cross-project Okusi convention (see /ai/scripts/CLAUDE.md
-# memory file reference_okusi_env_vars.md); reused, not new.
+# VECTORDBS is a cross-project Okusi convention; reused, not new.
 declare -g  -- _SB_KB_ROOT="${VECTORDBS:-/var/lib/vectordbs}"
 declare -g  -- _SB_KB=''
 declare -ga    _SB_KB_LIST=()                  # populated lazily by _sb_load_kb_list
@@ -169,6 +168,19 @@ _sb_load_agent_list() {
   )
 }
 
+# Resolve the default Agents.json path by deriving from claude.agent's
+# location in PATH (the registry lives next to the binary in the Okusi
+# tree, exposed via .symlink). Empty result if claude.agent is not in
+# PATH; callers fall through to their own missing-file diagnostic. Used
+# by _sb_agent_key, _sb_cmd_systemprompt, and _sb_cmd_status as the
+# fallback when AGENTS_JSON is unset.
+_sb_default_agents_json() {
+  local -- ca
+  ca=$(command -v claude.agent 2>/dev/null) || return 0
+  ca=$(realpath -- "$ca" 2>/dev/null) || return 0
+  printf '%s\n' "${ca%/*}/Agents.json"
+}
+
 # Populate _SB_KB_LIST from $_SB_KB_ROOT (default /var/lib/vectordbs) by
 # globbing for <name>/<name>.cfg pairs. Override with SB_KB_LIST="kb1 kb2"
 # for a curated menu (short-circuits the glob). Lazy: idempotent on repeat
@@ -279,8 +291,8 @@ _sb_resolve_agent_name() {
 # resolve_agent jq snippet in claude.agent:273-274.
 _sb_agent_key() {
   local -- name=$1
-  local -r agents_json=${AGENTS_JSON:-/ai/scripts/claude/agents/Agents.json}
-  [[ -f $agents_json ]] || return 1
+  local -r agents_json=${AGENTS_JSON:-$(_sb_default_agents_json)}
+  [[ -n $agents_json && -f $agents_json ]] || return 1
   jq -r --arg name "$name" \
     'keys[] | select((split(" - ")[0] | ascii_downcase) == ($name | ascii_downcase))' \
     "$agents_json" | head -n1

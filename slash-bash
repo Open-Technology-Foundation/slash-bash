@@ -47,7 +47,7 @@ Environment:
   SB_HISTORY_FILE             history log (default under \$XDG_CACHE_HOME)
   SB_SITE_BASH                per-host extension hook (under \$XDG_CONFIG_HOME)
   VECTORDBS                   KB filesystem root (/var/lib/vectordbs)
-  AGENTS_JSON                 agent registry (/ai/scripts/claude/agents/Agents.json)
+  AGENTS_JSON                 agent registry (default: derived from claude.agent in PATH)
   SB_CLAUDE_PROJECTS_DIR      Claude Code sessions dir (\$HOME/.claude/projects)
   DEBUG                       non-empty: keep dispatcher form visible in history
 

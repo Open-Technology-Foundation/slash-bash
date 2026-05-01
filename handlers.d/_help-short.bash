@@ -1,0 +1,37 @@
+#!/usr/bin/bash
+#shellcheck shell=bash disable=SC2034
+# handlers.d/_help.bash - the /help (and /?) handler. Hand-coded heredoc
+# is intentional: auto-generation from _SB_HELP would alphabetise the
+# output and lose the current grouping (settings -> ask -> introspection
+# -> exit).
+
+_sb_cmd_help_short() {
+  cat <<SLASH_CMD_HELP
+Available slash commands:
+  $_BOLD/?$_NC
+  $_BOLD/help$_NC
+
+  $_BOLD/ $_NC || $_BOLD/ask$_NC <text>
+
+  $_BOLD/agents$_NC [--select|--list]
+  $_BOLD/agent$_NC [<agent>]
+  $_BOLD/models$_NC [--select|--list]
+  $_BOLD/model$_NC [<name>]
+  $_BOLD/kbs$_NC || $_BOLD/knowledgebases$_NC [--select|--list]
+  $_BOLD/kb$_NC || $_BOLD/knowledgebase$_NC [<kbname>]
+
+  $_BOLD/maxtokens$_NC [<n>]
+  $_BOLD/ollama$_NC [model|off]
+  $_BOLD/history$_NC [<n>]
+  $_BOLD/status$_NC
+  $_BOLD/sessions$_NC
+  $_BOLD/rebase$_NC [--force]
+  $_BOLD/systemprompt$_NC [<agent>]
+  $_BOLD/q$_NC || $_BOLD/exit$_NC
+SLASH_CMD_HELP
+}
+
+_SB_HANDLERS['/?']=_sb_cmd_help_short
+_SB_HELP['/?']='show short help (one line per command)'
+
+#fin

@@ -80,4 +80,21 @@ teardown() {
   assert_output --partial "agent has no systemprompt"
 }
 
+@test "/systemprompt: AGENTS_JSON unset falls through to claude.agent-derived path" {
+  # Verifies the AGENTS_JSON->_sb_default_agents_json fallback chain.
+  # Mock claude.agent is in PATH (so _sb_load_agent_list succeeds), but
+  # _sb_default_agents_json resolves to $MOCK_DIR/Agents.json - which
+  # does not exist. _sb_agent_key returns 1, key stays empty, and the
+  # caller emits the canonical "agent not found in Agents.json" error.
+  # If the fallback regressed (e.g. helper returned wrong path or
+  # non-empty when claude.agent missing), this test would either crash
+  # or surface a different error.
+  unset AGENTS_JSON
+  mock_claude_agent list-good
+  _sb_load_agent_list
+  run _sb_cmd_systemprompt leet
+  assert_failure 1
+  assert_output --partial "agent not found in Agents.json: 'leet'"
+}
+
 #fin
