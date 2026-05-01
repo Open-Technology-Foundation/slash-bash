@@ -43,6 +43,8 @@ Available slash commands:
   $_BOLD/status$_NC
                    Print bash-reusable env dump of current session state
                    (\`source\` the output to round-trip into a fresh session)
+  $_BOLD/version$_NC
+                   Print slash-bash version
   $_BOLD/sessions$_NC
                    List Claude Code sessions for the current cwd
                    (TSV: mtime, uuid, title). UUID is \`claude --resume\`-able.

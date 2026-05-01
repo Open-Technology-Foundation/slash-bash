@@ -81,7 +81,8 @@ slash-bash --help
 
 | Command | Effect |
 |---------|--------|
-| `/help`, `/?` | Show inline help. |
+| `/help` | Full inline help with per-command descriptions. |
+| `/?` | Short help (one line per command). |
 | `/agents [--select\|--list]` | `--select` (default) presents a numbered picker via the bash `select` builtin and sets `_SB_AGENT` on choice; `q`/empty/`Ctrl-D` cancels. `--list` prints the legacy listing. Lazy-loads agents from `claude.agent --list` on first use. |
 | `/agent <name>` | Set the active agent (case-insensitive exact match, then prefix match). No arg shows current. |
 | `/models [--select\|--list]` | `--select` (default) presents a numbered picker via the bash `select` builtin and sets `_SB_MODEL` on choice. `--list` prints the legacy listing. |
@@ -96,6 +97,8 @@ slash-bash --help
 | `/status` | Print a bash-reusable env dump of current session state — one `export NAME='value'` line per `SB_*` knob (and the cross-project `VECTORDBS`, `AGENTS_JSON`, `OLLAMA_MODEL`, `SB_CLAUDE_PROJECTS_DIR`). Output is `eval`-safe; redirect to a file and `source` it before re-launching `slash-bash` to round-trip a saved session. |
 | `/sessions` | List Claude Code sessions for the current `cwd` as TSV (`mtime`, `uuid`, `title`), newest first. UUIDs are accepted by `claude --resume`. Reads `~/.claude/projects/<encoded-cwd>/*.jsonl`. Thin wrapper that delegates to the standalone `claude-sessions` script (also available as a top-level command in any shell). |
 | `/rebase [--force]` | Bind the active conversation to `$PWD`'s most-recent JSONL session (auto-pick — most recent by mtime). Subsequent `/ask` calls run inside the bound cwd and resume that UUID via `claude.agent --resume <uuid>`, regardless of where the user has `cd`'d. Default binding is the cwd at slash-bash entry; `_SB_SESSION_UUID` is empty until first `/ask` adopts the freshly-minted JSONL. If the current binding has recent `/ask` activity (within `SB_DIRTY_WINDOW` seconds — default 300), prompts before discarding; `--force` or non-TTY caller skips the prompt. No prior JSONL in the new cwd → next `/ask` starts a fresh conversation. |
+| `/filemanager [<dir>]`, `/fm` | Launch a file manager on `<dir>` (default `$PWD`). Auto-detects mode: GUI (`xdg-open`, detached) when `$DISPLAY`/`$WAYLAND_DISPLAY` is set, else TUI fallback (probes `$SB_FILEMANAGER`, `mc`, `ranger`, `nnn`, `lf`, `vifm`; foreground). Flags: `-g`/`--gui` and `-t`/`--tui` force the mode; `-n`/`--dry-run` prints what would launch. |
+| `/version` | Print slash-bash version. |
 | `/exit` | Leave slash-bash. |
 
 Anything not starting with `/` is plain bash:

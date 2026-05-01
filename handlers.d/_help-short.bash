@@ -26,6 +26,7 @@ Available slash commands:
   $_BOLD/ollama$_NC [model|off]
   $_BOLD/rebase$_NC [--force]
   $_BOLD/status$_NC
+  $_BOLD/version$_NC
   $_BOLD/sessions$_NC
   $_BOLD/systemprompt$_NC [<agent>]
 

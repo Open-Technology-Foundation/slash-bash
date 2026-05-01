@@ -26,7 +26,8 @@ The following commands MUST be available out-of-the-box, with TAB completion for
 
 | Command | Purpose | Arg completion |
 |---|---|---|
-| `/help`, `/?` | Show help | — |
+| `/help` | Full help with per-command descriptions | — |
+| `/?` | Short help (one line per command) | — |
 | `/agents` | List available agents (from `claude.agent --list`) | — |
 | `/agent [name]` | Show or set active agent (case-insensitive prefix match) | yes — agent names |
 | `/models` | List available models | — |
@@ -41,6 +42,8 @@ The following commands MUST be available out-of-the-box, with TAB completion for
 | `/sessions` | List Claude Code sessions for `$PWD` (TSV: mtime, uuid, title) | — |
 | `/status` | Print bash-reusable env dump of current session state (round-trippable via `eval "$(/status)"` then `slash-bash`) | — |
 | `/rebase [--force]` | Bind active conversation to `$PWD`'s most-recent JSONL (auto-pick); prompts before discarding a binding with recent `/ask` activity | yes — `--force` |
+| `/filemanager [<dir>]`, `/fm` | Launch file manager (GUI auto-detect via `xdg-open`, TUI fallback `mc`/`ranger`/`nnn`/`lf`/`vifm`); `-g`/`-t` force mode, `-n` dry-run | yes — directory paths |
+| `/version` | Print slash-bash version | — |
 | `/exit`, `/quit`, `/q`, `/bye` | Exit slash-bash | — |
 
 **FR-1.2.1** — Every command in the table above MUST be registered in `_SB_HANDLERS` (which drives both dispatch and first-word TAB completion). `_SB_SLASH_CMDS` is auto-derived from `${!_SB_HANDLERS[@]}` at end-of-init and remains declared (not deleted) so legacy site hooks can still append to it for completion-only entries.
@@ -162,7 +165,7 @@ Aliases are extra keys on `_SB_HANDLERS` (e.g. `_SB_HANDLERS[/h]=_sb_cmd_history
 
 **FR-5.1.2** — A library-load-time validation pass MUST warn if any `_SB_HANDLERS` entry resolves to an undefined function. This catches typos and missing-handler regressions at source time rather than at first dispatch.
 
-**FR-5.1.3** — The `${#_SB_HANDLERS[@]} == 23` invariant (16 handler files contributing 23 registrations including aliases) is asserted by the test suite. Bare `/` is special-cased in `__sb_dispatch` as the documented `/ask` shorthand and is NOT a key.
+**FR-5.1.3** — The `${#_SB_HANDLERS[@]} == 26` invariant (19 handler files contributing 26 registrations including aliases) is asserted by the test suite. Bare `/` is special-cased in `__sb_dispatch` as the documented `/ask` shorthand and is NOT a key.
 
 ### 5.2 Per-Host Site Extensions
 
