@@ -46,6 +46,9 @@ Available slash commands:
   $_BOLD/sessions$_NC
                    List Claude Code sessions for the current cwd
                    (TSV: mtime, uuid, title). UUID is \`claude --resume\`-able.
+  $_BOLD/filemanager$_NC || $_BOLD/fm$_NC [<dirpath>]
+                   Launch GUI file manager (xdg-open) on dirpath or \$PWD.
+                   -n / --dry-run prints what would launch.
   $_BOLD/rebase$_NC [--force]
                    Bind active conversation to \$PWD's most-recent JSONL
                    (auto-pick). Prompts if current binding has recent /ask

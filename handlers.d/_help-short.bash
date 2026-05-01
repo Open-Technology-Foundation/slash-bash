@@ -20,13 +20,15 @@ Available slash commands:
   $_BOLD/kbs$_NC || $_BOLD/knowledgebases$_NC [--select|--list]
   $_BOLD/kb$_NC || $_BOLD/knowledgebase$_NC [<kbname>]
 
+  $_BOLD/filemanager$_NC || $_BOLD/fm$_NC [<dirpath>]
+  $_BOLD/history$_NC [<n>]
   $_BOLD/maxtokens$_NC [<n>]
   $_BOLD/ollama$_NC [model|off]
-  $_BOLD/history$_NC [<n>]
+  $_BOLD/rebase$_NC [--force]
   $_BOLD/status$_NC
   $_BOLD/sessions$_NC
-  $_BOLD/rebase$_NC [--force]
   $_BOLD/systemprompt$_NC [<agent>]
+
   $_BOLD/q$_NC || $_BOLD/exit$_NC
 SLASH_CMD_HELP
 }

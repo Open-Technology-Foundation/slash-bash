@@ -1,0 +1,11 @@
+#!/usr/bin/bash
+# Mock xdg-open for slash-bash tests.
+# Logs the path it was asked to open to $MOCK_XDG_OPEN_LOG (if set) and
+# exits 0. The real xdg-open would launch a GUI process; the mock just
+# records the invocation so tests can assert what was passed.
+set -euo pipefail
+
+declare -- log=${MOCK_XDG_OPEN_LOG:-/dev/null}
+printf '%s\n' "$*" >> "$log"
+
+#fin
