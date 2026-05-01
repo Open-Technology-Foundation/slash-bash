@@ -107,15 +107,15 @@ already wrap the palette.
 
 | Helper | Use when | Defined |
 |---|---|---|
-| `_sb_load_agent_list` | before reading `_SB_AGENT_LIST` | `slash-bash.bash:156` |
-| `_sb_load_kb_list` | before reading `_SB_KB_LIST` | `slash-bash.bash:171` |
-| `_sb_resolve_agent_name` | match user input case-insensitive then prefix | `slash-bash.bash:261` |
-| `_sb_agent_key` | look up the long key in `Agents.json` | `slash-bash.bash:275` |
-| `_sb_pick_newest_uuid OUTVAR CWD [MIN_MTIME]` | find newest JSONL session for a cwd | `slash-bash.bash:291` |
-| `_sb_print_list LABEL VARNAME ITEMS…` | render an `available <label>s:` listing | `slash-bash.bash:219` |
-| `_sb_select_from_list LABEL VARNAME ITEMS…` | numbered picker via the `select` builtin | `slash-bash.bash:232` |
-| `_sb_iso_now` | ISO-8601 timestamp (portable fallback) | `slash-bash.bash:189` |
-| `_sb_spacetime` | hour-granular spacetime string (matches `claude.agent`) | `slash-bash.bash:199` |
+| `_sb_load_agent_list` | before reading `_SB_AGENT_LIST` | `slash-bash.bash:160` |
+| `_sb_load_kb_list` | before reading `_SB_KB_LIST` | `slash-bash.bash:188` |
+| `_sb_resolve_agent_name` | match user input case-insensitive then prefix | `slash-bash.bash:278` |
+| `_sb_agent_key` | look up the long key in `Agents.json` | `slash-bash.bash:292` |
+| `_sb_pick_newest_uuid OUTVAR CWD [MIN_MTIME]` | find newest JSONL session for a cwd | `slash-bash.bash:308` |
+| `_sb_print_list LABEL VARNAME ITEMS…` | render an `available <label>s:` listing | `slash-bash.bash:236` |
+| `_sb_select_from_list LABEL VARNAME ITEMS…` | numbered picker via the `select` builtin | `slash-bash.bash:249` |
+| `_sb_iso_now` | ISO-8601 timestamp (portable fallback) | `slash-bash.bash:206` |
+| `_sb_spacetime` | hour-granular spacetime string (matches `claude.agent`) | `slash-bash.bash:216` |
 
 ## Messaging primitives
 
@@ -150,8 +150,10 @@ _SB_COMPLETE[/knowledgebase]=_sb_complete_kb
 
 `_SB_HELP` is keyed on the canonical alias only. `_SB_COMPLETE` is
 keyed on every alias that should accept TAB completion. See also
-`_history.bash` (`/history`, `/h`), `_exit.bash` (`/bye`, `/quit`,
-`/q`, `/exit`), `_help.bash` (`/help`, `/?`).
+`_history.bash` (`/history`, `/h`) and `_exit.bash` (`/bye`, `/quit`,
+`/q`, `/exit`). `/help` and `/?` look like aliases but live in
+separate files (`_help.bash`, `_help-short.bash`) because they render
+distinct help bodies.
 
 ## Inter-handler dependencies — beware lex order
 
@@ -174,7 +176,7 @@ End-of-init runs a pass that walks `_SB_HANDLERS` and emits
 function is missing. Typos and copy-paste errors surface at source
 time, not at first dispatch.
 
-The bats suite asserts `${#_SB_HANDLERS[@]} == 24` as a guard against
+The bats suite asserts `${#_SB_HANDLERS[@]} == 26` as a guard against
 silent drift. A new handler bumps that count — update the assertion in
 `../tests/` in lockstep with the new file.
 

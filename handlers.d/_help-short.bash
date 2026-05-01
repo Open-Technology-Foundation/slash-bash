@@ -1,9 +1,8 @@
 #!/usr/bin/bash
 #shellcheck shell=bash disable=SC2034
-# handlers.d/_help.bash - the /help (and /?) handler. Hand-coded heredoc
-# is intentional: auto-generation from _SB_HELP would alphabetise the
-# output and lose the current grouping (settings -> ask -> introspection
-# -> exit).
+# handlers.d/_help-short.bash - the /? handler. Single hand-coded
+# heredoc with one line per command (no descriptions); the verbose
+# /help form lives in _help.bash.
 
 _sb_cmd_help_short() {
   cat <<SLASH_CMD_HELP

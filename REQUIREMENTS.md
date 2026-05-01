@@ -223,7 +223,7 @@ Re-run `make audit` after any modification; deviations from this baseline requir
 shellcheck -x slash-bash slash-bash.bash .slash-bash-init claude-sessions handlers.d/*.bash
 bcscheck slash-bash
 bcscheck slash-bash.bash
-make test                # bats Phase 1 (~234 cases)
+make test                # bats Phase 1 (266 cases)
 make test-e2e            # bats Phase 2 — PTY-driven chord-trick verification
 make check               # combined lint + test gate
 ```
@@ -300,16 +300,16 @@ bash ./slash-bash.bash; echo "expect 1, got $?"
 
 | File | Role | Lines |
 |---|---|---|
-| `slash-bash` | launcher | 88 |
-| `slash-bash.bash` | sourceable library (the chord trick + registry-driven dispatcher) | ~656 |
+| `slash-bash` | launcher | 91 |
+| `slash-bash.bash` | sourceable library (the chord trick + registry-driven dispatcher) | ~716 |
 | `.slash-bash-init` | rcfile sourced by `bash --init-file` | 71 |
-| `handlers.d/_*.bash` | one file per slash-command handler (16 files; 23 registrations including aliases) | ~611 total |
+| `handlers.d/_*.bash` | one file per slash-command handler (19 files; 26 registrations including aliases) | ~854 total |
 | `bash-preexec.sh` | vendored MIT (preexec hooks) | 567 |
 | `claude-sessions` | sibling CLI (`/sessions` delegates to it) | 82 |
 | `Makefile` | dev workflow targets: `test`, `test-e2e`, `lint`, `audit`, `check` | 39 |
-| `tests/*.bats` | bats suite (~234 cases across ~20 files; `e2e_chord.bats` runs only with `BATS_E2E=1`) | — |
+| `tests/*.bats` | bats suite (266 cases across 21 files; `e2e_chord.bats` runs only with `BATS_E2E=1`) | — |
 | `.symlink` | declares which executables are exposed to PATH | 2 entries: `slash-bash`, `claude-sessions` |
-| `README.md` | user-facing tour, "How to extend", limits | ~400 |
+| `README.md` | user-facing tour, "How to extend", limits | ~432 |
 | `CLAUDE.md` | maintainer doc for Claude Code (gitignored) | — |
 | `BASH-CODING-STANDARD.md` | symlink → `/usr/local/share/yatti/BCS/data/` (gitignored) | — |
 | `.gudang/process-llm-command` | preserved abandoned prototype (do not revive) | 30 |

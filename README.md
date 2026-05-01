@@ -287,7 +287,7 @@ directory itself.
 
 | Tool | Source | URL | Notes |
 |------|--------|-----|-------|
-| ShellCheck | shellcheck | https://github.com/koalaman/shellcheck | `shellcheck -x` is mandatory and currently passes clean on all four bash files (`slash-bash`, `slash-bash.bash`, `.slash-bash-init`, `claude-sessions`). |
+| ShellCheck | shellcheck | https://github.com/koalaman/shellcheck | `shellcheck -x` is mandatory and currently passes clean on every in-tree bash file: `slash-bash`, `slash-bash.bash`, `.slash-bash-init`, `claude-sessions`, plus every `handlers.d/_*.bash`. |
 | bcscheck   | Okusi BCS toolchain | (internal) | LLM-backed BCS compliance check. ~10 minutes per script. Optional. |
 | BCS data   | Bash Coding Standard | (internal — symlinked) | `/usr/local/share/yatti/BCS/data/`. |
 
@@ -380,7 +380,7 @@ Future hooks (still out of scope):
 shellcheck -x slash-bash slash-bash.bash .slash-bash-init claude-sessions handlers.d/*.bash
 bcscheck slash-bash.bash      # full BCS, LLM-backed, slow (~10 min)
 bcscheck claude-sessions       # ditto
-make test                      # bats suite (~234 cases)
+make test                      # bats suite (266 cases)
 make test-e2e                  # PTY-driven chord-trick verification
 make check                     # combined lint + test gate
 ```
@@ -425,7 +425,7 @@ slash-bash
   the live interactive shell on any handler failure; this is documented in
   the source. Run `make audit` (gitignored output → `AUDIT-BASH.md`) to
   reproduce the findings locally.
-- ShellCheck: clean (`-x`) on all four bash files.
+- ShellCheck: clean (`-x`) on every in-tree bash file (launcher, library, init rcfile, `claude-sessions`, and every `handlers.d/_*.bash`).
 - Enterprise policy: `CLAUDE.md` and `.claude/` never committed
   (enforced by `.gitignore`).
 

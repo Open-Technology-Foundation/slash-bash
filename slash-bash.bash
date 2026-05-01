@@ -136,8 +136,9 @@ fi
 
 # __msg PREFIX MSG... - emit one stderr line per MSG with session identity
 # and a sigil. SC2059 is intentional: $1 carries the caller's sigil (which
-# may include ANSI escapes), the agent prefix is pre-quoted, and %s handles
-# the variadic payload. All in-tree callers pass literal sigil strings.
+# may include ANSI escapes), the agent prefix expands from an internal
+# global (_SB_AGENT/SCRIPT_NAME) never user input, and %s handles the
+# variadic payload. All in-tree callers pass literal sigil strings.
 # shellcheck disable=SC2059
 __msg()     { >&2 printf "${_SB_AGENT:-${SCRIPT_NAME:-slash-bash}}: $1 %s\n" "${@:2}"; }
 
@@ -172,8 +173,8 @@ _sb_load_agent_list() {
 # location in PATH (the registry lives next to the binary in the Okusi
 # tree, exposed via .symlink). Empty result if claude.agent is not in
 # PATH; callers fall through to their own missing-file diagnostic. Used
-# by _sb_agent_key, _sb_cmd_systemprompt, and _sb_cmd_status as the
-# fallback when AGENTS_JSON is unset.
+# by _sb_agent_key and _sb_cmd_systemprompt as the fallback when
+# AGENTS_JSON is unset.
 _sb_default_agents_json() {
   local -- ca
   ca=$(command -v claude.agent 2>/dev/null) || return 0
@@ -372,7 +373,7 @@ _sb_complete_first() {
 # via _SB_HANDLERS (populated by handlers.d/_*.bash files). Bare `/' is
 # special-cased as the documented shorthand for /ask rather than
 # registered as a key, to keep the first-word completion list clean and
-# preserve the `${#_SB_HANDLERS[@]} == 23` invariant tested by the suite.
+# preserve the `${#_SB_HANDLERS[@]} == 26` invariant tested by the suite.
 # ---------------------------------------------------------------------------
 
 __sb_dispatch() {

@@ -41,7 +41,9 @@ Behaviour:
 
 Environment:
   SB_AGENT, SB_MODEL          initial agent/model (leet, claude-opus-4-7)
+  SB_FILEMANAGER              preferred TUI file manager (probed first by /filemanager)
   SB_KB_LIST                  curated KB menu (else discovered from \$VECTORDBS)
+  SB_LOG_ARGS                 set 1 to log full /ask prompts in history (default: verb only)
   SB_MAX_TOKENS               initial CLAUDE_CODE_MAX_OUTPUT_TOKENS (32000)
   SB_OLLAMA                   initial Ollama-on flag (0)
   SB_HISTORY_FILE             history log (default under \$XDG_CACHE_HOME)
