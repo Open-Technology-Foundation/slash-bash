@@ -238,9 +238,9 @@ _sb_print_list() {
   local -- label=$1
   local -n __sb_print_target=$2
   shift 2
-  printf 'available %ss:\n' "$label"
-  printf '  - %s\n' "$@"
-  printf 'current: %s\n' "${__sb_print_target:-<none>}"
+  >&2 printf 'available %ss:\n' "$label"
+  >&2 printf '  - %s\n' "$@"
+  >&2 printf 'current: %s\n' "${__sb_print_target:-<none>}"
 }
 
 # _sb_select_from_list LABEL CURRENT_VAR ITEMS...
@@ -254,16 +254,17 @@ _sb_select_from_list() {
   shift 2
   (($#)) || { _error "no ${label}s available"; return 1; }
   [[ -t 0 ]] || { _error "/${label}s --select requires an interactive terminal"; return 1; }
-  printf 'current %s: %s\n' "$label" "${__sb_sel_target:-<none>}"
+  >&2 printf 'current %s: %s\n' "$label" "${__sb_sel_target:-<none>}"
   local -- picked=''
   local -- PS3="select ${label} number (q to cancel): "
   select picked in "$@"; do
     case ${REPLY:-} in
       q|Q|'') return 1 ;;
+      *)      ;;
     esac
     if [[ -n $picked ]]; then
       __sb_sel_target=$picked
-      printf '%s set to: %s\n' "$label" "$__sb_sel_target"
+      >&2 printf '%s set to: %s\n' "$label" "$__sb_sel_target"
       return 0
     fi
     _error "invalid choice ${REPLY@Q}"

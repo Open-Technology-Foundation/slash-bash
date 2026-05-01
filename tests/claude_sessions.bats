@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 #shellcheck shell=bats
 # claude_sessions.bats - standalone claude-sessions CLI.
-# Output format (TSV: mtime\tuuid\ttitle), exit codes 0/2/3/18, title fallback chain.
+# Output format (TSV: mtime\tuuid\ttitle), exit codes 0/2/3/18/22, title fallback chain.
 
 load test_helper
 
@@ -35,10 +35,16 @@ _run_sessions() {
   assert_output --partial "Exit codes:"
 }
 
-@test "claude-sessions: unknown option exits 2" {
+@test "claude-sessions: invalid option exits 22" {
   run "$PROJECT_DIR/claude-sessions" --bogus
+  assert_failure 22
+  assert_output --partial "invalid option"
+}
+
+@test "claude-sessions: unexpected argument exits 2" {
+  run "$PROJECT_DIR/claude-sessions" extra-arg
   assert_failure 2
-  assert_output --partial "unknown option"
+  assert_output --partial "unexpected argument"
 }
 
 @test "claude-sessions: missing project dir exits 3" {

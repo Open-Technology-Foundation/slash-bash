@@ -7,6 +7,14 @@
 #
 # Sourced via: bash --init-file <this-file>
 
+# Refuse direct execution; this rcfile is only meaningful when sourced
+# by `bash --init-file`. BCS0407.
+[[ ${BASH_SOURCE[0]} != "$0" ]] || {
+  # shellcheck disable=SC2016  # literal backticks in diagnostic
+  >&2 printf '%s: must be sourced via `bash --init-file`\n' "${0##*/}"
+  exit 1
+}
+
 # Mirror the launcher's BASH_COMPLETION_VERSINFO=1. The load-bearing export
 # is in the launcher (set BEFORE `exec bash`) - by the time this rcfile
 # runs, /etc/bash.bashrc has already iterated /etc/profile.d/*.sh and the
@@ -29,6 +37,7 @@ export BASH_COMPLETION_VERSINFO=1
 declare -i _sb_color_prompt=0
 case ${TERM:-} in
   xterm-color|*-256color) _sb_color_prompt=1 ;;
+  *) ;;
 esac
 if ((_sb_color_prompt)); then
   PS1="\[\e]0;\u@\h: \w\a\]"                    # Terminal title
@@ -47,6 +56,8 @@ unset -v _sb_color_prompt
 # Load the slash-bash library from this file's directory.
 __SB_DIR=$(dirname -- "${BASH_SOURCE[0]}")
 # shellcheck source=slash-bash.bash
+[[ -f "$__SB_DIR"/slash-bash.bash ]] \
+  || { >&2 printf '.slash-bash-init: slash-bash.bash not found in %q\n' "$__SB_DIR"; return 1; }
 source "$__SB_DIR"/slash-bash.bash
 unset __SB_DIR
 
