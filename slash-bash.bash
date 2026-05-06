@@ -556,9 +556,11 @@ _sb_redraw_original() {
 preexec_functions+=(_sb_redraw_original _sb_log_dispatch)
 
 # ---------------------------------------------------------------------------
-# Per-command handler files. Each handlers.d/_*.bash defines its
+# Per-command handler files. Each handlers.d/*.bash file defines its
 # _sb_cmd_<name> handler (and any colocated _sb_complete_<name>) and
 # registers itself by appending to _SB_HANDLERS / _SB_HELP / _SB_COMPLETE.
+# Convention is to prefix with `_` to keep handler files visually distinct
+# from any future README/sidecar files.
 # Glob is alphabetic - this is the implicit ordering contract for
 # inter-handler dependencies (e.g. _systemprompt.bash reuses
 # _sb_complete_agent from _agent.bash, and _agent.bash < _systemprompt.bash

@@ -77,6 +77,68 @@ slash-bash --version       # 1.0.0
 slash-bash --help
 ```
 
+## Auto-enter from `~/.bashrc`
+
+To make every interactive terminal land directly inside slash-bash,
+append this to the **end** of `~/.bashrc`:
+
+```bash
+# Auto-enter slash-bash for interactive shells.
+# Guards: $- contains 'i' (interactive only); _SB_VERSION unset
+# (skip when already inside slash-bash, since .slash-bash-init
+# re-sources ~/.bashrc).
+if [[ $- == *i* ]] && [[ -z ${_SB_VERSION:-} ]] && command -v slash-bash >/dev/null; then
+  exec slash-bash
+fi
+```
+
+Two guards keep this safe:
+
+- `$-` contains `i` — only interactive shells are hijacked. Scripts,
+  `ssh host cmd`, `bash -c '…'`, cron, rsync-over-ssh and every other
+  non-interactive entry point keep using plain bash.
+- `_SB_VERSION` is unset — set by the launcher itself
+  (`slash-bash:14`) and exported through the inner shell, so the
+  re-source of `~/.bashrc` performed by `.slash-bash-init` skips the
+  `exec` instead of recursing.
+
+`command -v slash-bash` is the soft-fail: if the launcher is ever
+uninstalled or `PATH` is broken, the user falls back to plain bash
+instead of getting a "command not found" loop on every new terminal.
+
+### Setting initial state before `exec`
+
+The block runs *inside* the user's normal `~/.bashrc`, so any `SB_*`
+env-var exported before the `exec` is inherited by the slash-bash
+session and used as initial state by the library. The most common
+case is overriding the default agent:
+
+```bash
+if [[ $- == *i* ]] && [[ -z ${_SB_VERSION:-} ]] && command -v slash-bash >/dev/null; then
+  declare -x SB_AGENT=claude            # default agent for this host
+  declare -x SB_MODEL=claude-sonnet-4-6 # default model
+  declare -x SB_MAX_TOKENS=16000        # initial token cap for /ask
+  exec slash-bash
+fi
+```
+
+Any of the variables in [Initial state](#initial-state-read-once-at-library-load)
+or [Filesystem locations](#filesystem-locations) can be set here.
+`SB_AGENT` is the headline knob — it picks the active agent (and
+the agent name printed at the end of `PS1`) before the first prompt
+draws.
+
+### Recovery and opt-out
+
+```bash
+bash --norc -i        # plain bash even if ~/.bashrc is broken
+unset _SB_VERSION     # inside slash-bash: forces a re-exec on next /exit + new shell
+```
+
+Removing the auto-enter block is a single deletion — slash-bash
+itself is launched the same way as before (`slash-bash` from the
+command line) and works without the block.
+
 ## Slash commands
 
 | Command | Effect |

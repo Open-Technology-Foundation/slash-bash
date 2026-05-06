@@ -41,6 +41,7 @@ Behaviour:
 
 Environment:
   SB_AGENT, SB_MODEL          initial agent/model (leet, claude-opus-4-7)
+  SB_MODEL_LIST               space-separated /models menu (default: 4 claude aliases)
   SB_FILEMANAGER              preferred TUI file manager (probed first by /filemanager)
   SB_KB_LIST                  curated KB menu (else discovered from \$VECTORDBS)
   SB_LOG_ARGS                 set 1 to log full /ask prompts in history (default: verb only)
