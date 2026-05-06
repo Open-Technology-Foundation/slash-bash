@@ -1,0 +1,148 @@
+bcs: ◉ Backend 'claude' inferred from model 'balanced'
+bcs: ◉ Checking '/ai/scripts/claude/slash-bash/slash-bash.bash' against BCS (backend=claude)...
+bcs: ◉ bcs check --model 'balanced' --effort 'medium' --strict 'off' '/ai/scripts/claude/slash-bash/slash-bash.bash'
+bcs: ◉ Elapsed: 386s
+Now I have sufficient coverage of the BCS standard. Let me analyze the file systematically and produce the compliance report.
+
+`★ Insight ─────────────────────────────────────`
+`slash-bash.bash` is an **interactive shell library** — it deliberately omits `set -euo pipefail` (BCS0407 exempts sourced libraries), rejects direct execution (BCS0407 ✓), and has documented side-effects-on-source (readline bindings, handler sourcing) that are core to its purpose. The audit must account for this library context throughout.
+`─────────────────────────────────────────────────`
+
+---
+
+## BCS Compliance Report — `slash-bash.bash`
+
+---
+
+### [WARN] BCS0305 — Printf Format Strings (Tier: recommended)
+
+**Lines 143, 150**
+
+Both `__msg` and `_vecho` embed variable expansions directly in double-quoted format strings, violating the rule that format strings use single quotes while variables are passed as separate arguments.
+
+```bash
+# Line 143 — current (VIOLATION)
+__msg() { >&2 printf "${_SB_AGENT:-${SCRIPT_NAME:-slash-bash}}: $1 %s\n" "${@:2}"; }
+
+# Line 150 — current (VIOLATION)
+_vecho() { ((_VERBOSE)) || return 0; >&2 printf "${_SB_AGENT:-${SCRIPT_NAME:-slash-bash}}: %s\n" "$@"; }
+```
+
+The `#shellcheck disable=SC2059` on line 140 suppresses shellcheck's warning but does not constitute a BCS suppression (`#bcscheck disable=BCS0305`).
+
+**Fix:**
+```bash
+# Line 143
+__msg() { >&2 printf '%s: %s %s\n' "${_SB_AGENT:-${SCRIPT_NAME:-slash-bash}}" "$1" "${@:2}"; }
+
+# Line 150
+_vecho() { ((_VERBOSE)) || return 0; >&2 printf '%s: %s\n' "${_SB_AGENT:-${SCRIPT_NAME:-slash-bash}}" "$@"; }
+```
+
+---
+
+### [WARN] BCS0505 — Forbidden `++` Increment (Tier: style)
+
+**Line 421**
+
+C-style for loop uses `i++`, which BCS explicitly prohibits in all forms. Mandated form is `i+=1`.
+
+```bash
+# Line 421 — current (VIOLATION)
+for (( i=0; i<len; i++ )); do
+
+# Fix
+for (( i=0; i<len; i+=1 )); do
+```
+
+BCS0503 also shows `for ((i=0; i<10; i++)); do` as the canonical **wrong** example.
+
+---
+
+### [WARN] BCS0711 — Verbose Combined Redirection (Tier: style)
+
+**Line 594**
+
+`>/dev/null 2>&1` is the verbose form; BCS0711 mandates `&>/dev/null` for combined stdout+stderr redirection.
+
+```bash
+# Line 594 — current (VIOLATION)
+  declare -F -- "$_sb_fn" >/dev/null 2>&1 \
+
+# Fix
+  declare -F -- "$_sb_fn" &>/dev/null \
+```
+
+---
+
+### [WARN] BCS0408 — Missing Dependency Check for `jq` (Tier: recommended)
+
+**Lines 298–300 (`_sb_agent_key`)**
+
+`jq` is a non-standard, separately packaged tool. BCS0408 requires a `command -v` guard before use. If `jq` is absent, the function emits a cryptic `command not found` rather than a clean diagnostic.
+
+```bash
+# Current — no check (VIOLATION)
+_sb_agent_key() {
+  local -- name=$1
+  local -r agents_json=${AGENTS_JSON:-$(_sb_default_agents_json)}
+  [[ -n $agents_json && -f $agents_json ]] || return 1
+  jq -r --arg name "$name" \   # ← jq unchecked
+    ...
+}
+
+# Fix — add guard after the agents_json check
+  command -v jq >/dev/null || return 1
+```
+
+---
+
+### [WARN] BCS0606 — `&&` Chain Without `||:` in Global Scope (Tier: core)
+
+**Line 579**
+
+```bash
+shopt -q nullglob && _sb_was_nullglob=1
+```
+
+When `nullglob` is **not** set, `shopt -q nullglob` returns exit code 1. The `&&` short-circuits, leaving the compound expression with exit code 1. If the library is ever sourced into a shell with `set -e` active (e.g., a user who has `set -e` in their `.bashrc` before sourcing this library), this silently exits the shell at this line.
+
+The interactive guard at line 24 (`[[ $- == *i* ]] || return 0`) mitigates this in practice — interactive shells rarely have `set -e` — but the idiomatic BCS fix is unconditional:
+
+```bash
+# Current (VIOLATION)
+shopt -q nullglob && _sb_was_nullglob=1
+
+# Fix
+shopt -q nullglob && _sb_was_nullglob=1 ||:
+```
+
+---
+
+### Notes: Deliberate, Documented Non-Violations
+
+These were inspected and are **not** violations:
+
+| Item | Why Not a Violation |
+|------|-------------------|
+| No `set -euo pipefail` | BCS0407 (core): "Never apply `set -euo pipefail` when sourced." Explicitly documented lines 27–30. |
+| Side-effects on source (readline bindings, handler sourcing) | Library's explicit purpose as an interactive shell extension; BCS0407's "only define functions" guidance targets pure function libraries. |
+| `${!_SB_HANDLERS[*]}` in `compgen -W` (line 366) | `[*]` is intentional — `compgen -W` requires a space-joined word list, not array iteration. |
+| `_die()` using `return` not `exit` | Documented at lines 151–154; `exit` would kill the user's session. |
+| Double-underscore `__sb_*` function names | Not prohibited; stronger-private convention beyond BCS's single-underscore minimum. |
+| `#shellcheck disable=SC2059` on line 140 | Not a BCS suppression, but the underlying risk (_SB_AGENT is an internal global, never user input) is documented and real injection risk is low. |
+
+---
+
+## Summary Table
+
+| BCS Code | Tier | Severity | Line(s) | Description |
+|----------|------|----------|---------|-------------|
+| BCS0305 | recommended | [WARN] | 143, 150 | Double-quoted printf format strings embed `$1` / `${_SB_AGENT:-…}` in the format spec; must use single-quoted format with variables as arguments |
+| BCS0505 | style | [WARN] | 421 | `i++` used in C-style for loop; all increments must use `i+=1` |
+| BCS0711 | style | [WARN] | 594 | `>/dev/null 2>&1` verbose combined redirection; use `&>/dev/null` |
+| BCS0408 | recommended | [WARN] | 298–300 | `jq` (non-standard tool) used in `_sb_agent_key()` without a `command -v jq >/dev/null || return 1` dependency check |
+| BCS0606 | core | [WARN] | 579 | `shopt -q nullglob && _sb_was_nullglob=1` lacks `||:`; vulnerable to `set -e` exit if sourced in a strict-mode shell; mitigated by interactive-only guard |
+
+**5 findings total — 0 [ERROR], 5 [WARN].** The library is well-structured and overwhelmingly BCS-compliant given its interactive-shell-extension design context.
+bcs: ◉ Exit: 1

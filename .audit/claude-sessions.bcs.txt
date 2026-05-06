@@ -1,0 +1,52 @@
+bcs: ◉ Backend 'claude' inferred from model 'balanced'
+bcs: ◉ Checking '/ai/scripts/claude/slash-bash/claude-sessions' against BCS (backend=claude)...
+bcs: ◉ bcs check --model 'balanced' --effort 'medium' --strict 'off' '/ai/scripts/claude/slash-bash/claude-sessions'
+bcs: ◉ Elapsed: 188s
+Reading both files is already done from the system context. Analyzing the script line-by-line against BCS now.
+
+---
+
+## `claude-sessions` — BCS Audit
+
+### BCS0103 · Recommended · [WARN] · Line 21
+
+```bash
+declare -r SCRIPT_PATH=$(realpath -- "${BASH_SOURCE[0]}")
+```
+
+BCS0103 specifies `realpath -- "$0"` as the canonical form. `${BASH_SOURCE[0]}` is equivalent when the script is directly executed (not sourced), but deviates from the standard pattern. This script has no dual-purpose fence, so `$0` is the correct choice.
+
+**Fix:** `declare -r SCRIPT_PATH=$(realpath -- "$0")`
+
+---
+
+### BCS0306 · Recommended · [WARN] · Line 61
+
+```bash
+[[ -d $dir ]] || die 3 "no sessions for $PWD"
+```
+
+BCS0306 requires `${var@Q}` for any path or user-visible string in error messages to handle embedded spaces, newlines, and special characters safely. `$PWD` is unquoted here in the diagnostic sense.
+
+**Fix:** `[[ -d $dir ]] || die 3 "no sessions for ${PWD@Q}"`
+
+---
+
+### No violation — design note · Line 77
+
+```bash
+  done | sort -r
+```
+
+The `done | sort -r` pipes the `for` loop into a subshell. BCS0504 explicitly targets **while** loops; BCS0411's anti-pattern concerns variable state escaping a subshell boundary. Neither applies here: the loop produces only stdout (`printf`) and no variable state needs to survive the pipe. The pattern is idiomatic and intentional.
+
+---
+
+## Summary
+
+| BCS Code | Tier        | Severity | Line(s) | Description                                             |
+|----------|-------------|----------|---------|---------------------------------------------------------|
+| BCS0103  | recommended | [WARN]   | 21      | `${BASH_SOURCE[0]}` used; BCS canonical form is `"$0"` |
+| BCS0306  | recommended | [WARN]   | 61      | `$PWD` in `die` message lacks `@Q` safe-quoting        |
+
+Two warnings, zero errors. Script is structurally sound and largely well-written — strict mode, correct scoping, proper messaging hierarchy, BCS exit codes, `@Q` used in argument-parsing error messages, and `>&2` placement all correct.
