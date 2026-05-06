@@ -152,7 +152,7 @@ All start with `_SB_` prefix. Initial values come from like-named env vars (`SB_
 
 ### 5.1 Adding a Built-in Slash Command
 
-**FR-5.1.1** — A new `/cmd` is a single new file under `handlers.d/`. The library globs `handlers.d/_*.bash` at init time; each file:
+**FR-5.1.1** — A new `/cmd` is a single new file under `handlers.d/`. The library globs `handlers.d/*.bash` at init time (convention is to prefix handler files with `_` to keep them visually distinct from any future README/sidecar files); each file:
 
 1. Defines the `_sb_cmd_<name>` handler body.
 2. Optionally defines `_sb_complete_<name>` (argument completer).
@@ -209,7 +209,7 @@ Re-run `make audit` after any modification; deviations from this baseline requir
 
 ### 6.4 Compatibility
 
-**NFR-6.4.1** — `_sb_spacetime` MUST stay format-synced with `claude.agent`'s `spacetime_string` (lines 68-80 of that script). The sync comment at `slash-bash.bash:193-198` flags the dependency.
+**NFR-6.4.1** — `_sb_spacetime` MUST stay format-synced with `claude.agent`'s `spacetime_string` (lines 68-80 of that script). The sync comment at `slash-bash.bash:211-216` flags the dependency.
 
 **NFR-6.4.2** — The cwd-encoding scheme used by `/sessions` MUST round-trip with whatever Claude Code itself writes to `~/.claude/projects/`. Independent encoding changes are forbidden.
 
@@ -223,7 +223,7 @@ Re-run `make audit` after any modification; deviations from this baseline requir
 shellcheck -x slash-bash slash-bash.bash .slash-bash-init claude-sessions handlers.d/*.bash
 bcscheck slash-bash
 bcscheck slash-bash.bash
-make test                # bats Phase 1 (266 cases)
+make test                # bats Phase 1 (267 cases)
 make test-e2e            # bats Phase 2 — PTY-driven chord-trick verification
 make check               # combined lint + test gate
 ```
@@ -300,16 +300,16 @@ bash ./slash-bash.bash; echo "expect 1, got $?"
 
 | File | Role | Lines |
 |---|---|---|
-| `slash-bash` | launcher | 91 |
-| `slash-bash.bash` | sourceable library (the chord trick + registry-driven dispatcher) | ~716 |
+| `slash-bash` | launcher | 92 |
+| `slash-bash.bash` | sourceable library (the chord trick + registry-driven dispatcher) | ~719 |
 | `.slash-bash-init` | rcfile sourced by `bash --init-file` | 71 |
 | `handlers.d/_*.bash` | one file per slash-command handler (19 files; 26 registrations including aliases) | ~854 total |
 | `bash-preexec.sh` | vendored MIT (preexec hooks) | 567 |
 | `claude-sessions` | sibling CLI (`/sessions` delegates to it) | 82 |
 | `Makefile` | dev workflow targets: `test`, `test-e2e`, `lint`, `audit`, `check` | 39 |
-| `tests/*.bats` | bats suite (266 cases across 21 files; `e2e_chord.bats` runs only with `BATS_E2E=1`) | — |
+| `tests/*.bats` | bats suite (267 cases across 21 files; `e2e_chord.bats` runs only with `BATS_E2E=1`) | — |
 | `.symlink` | declares which executables are exposed to PATH | 2 entries: `slash-bash`, `claude-sessions` |
-| `README.md` | user-facing tour, "How to extend", limits | ~432 |
+| `README.md` | user-facing tour, "How to extend", limits | ~494 |
 | `CLAUDE.md` | maintainer doc for Claude Code (gitignored) | — |
 | `BASH-CODING-STANDARD.md` | symlink → `/usr/local/share/yatti/BCS/data/` (gitignored) | — |
 | `.gudang/process-llm-command` | preserved abandoned prototype (do not revive) | 30 |
