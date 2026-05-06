@@ -58,11 +58,37 @@ re-implementing fragile DEBUG-trap plumbing.
 
 ## Install / run
 
+### Developer install (run from the working tree)
+
 ```bash
 cd <slash-bash repo>
 sudo symlink -S .          # exposes the launcher to /usr/local/bin
 slash-bash                # opens an isolated interactive bash
 ```
+
+This creates symlinks back into your working tree — useful for active
+development. Removing the repo will break the install.
+
+### System install (`make install`)
+
+```bash
+sudo make install                       # /usr/local default
+sudo make install PREFIX=/usr           # distro-style prefix
+sudo make install DESTDIR=/tmp/pkg      # staged install for packagers
+sudo make uninstall                     # clean removal
+```
+
+Files land in `$(PREFIX)/share/slash-bash/` (the launcher, library,
+init rcfile, `bash-preexec.sh`, `claude-sessions`, and every
+`handlers.d/*.bash`). Symlinks are created at `$(PREFIX)/bin/slash-bash`
+and `$(PREFIX)/bin/claude-sessions`. The launcher resolves its sibling
+paths via `realpath`, so the symlink-into-share-dir layout works
+without any environment-variable plumbing.
+
+Do not mix the two install paths against the same prefix — whichever
+ran last wins, and an explicit `make uninstall` (or `rm` of the
+`/usr/local/bin/{slash-bash,claude-sessions}` symlinks) is the clean
+transition between them.
 
 The launcher `exec`s `bash --init-file .slash-bash-init -i`, so your
 normal `~/.bashrc` is inherited but your outer shell is untouched. The
