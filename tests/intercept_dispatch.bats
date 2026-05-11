@@ -75,6 +75,25 @@ teardown() {
   [[ $READLINE_LINE == "__sb_dispatch '/ask don'\\''t'" ]]
 }
 
+@test "intercept: '/usr/local/bin/foo' passthrough (path, not slash command)" {
+  READLINE_LINE='/usr/local/bin/foo --opt arg'
+  __sb_intercept
+  # Path must be left untouched - bash will execve it directly.
+  [[ $READLINE_LINE == '/usr/local/bin/foo --opt arg' ]]
+}
+
+@test "intercept: '/bin/ls -la' passthrough (path)" {
+  READLINE_LINE='/bin/ls -la'
+  __sb_intercept
+  [[ $READLINE_LINE == '/bin/ls -la' ]]
+}
+
+@test "intercept: bare '/' still dispatches (/ask shorthand)" {
+  READLINE_LINE='/'
+  __sb_intercept
+  [[ $READLINE_LINE == "__sb_dispatch '/'" ]]
+}
+
 @test "intercept: _SB_LAST_ORIGINAL captures the original pre-rewrite form" {
   _SB_LAST_ORIGINAL=''
   READLINE_LINE='/agents'

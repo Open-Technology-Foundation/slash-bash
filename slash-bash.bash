@@ -364,6 +364,20 @@ _sb_complete_first() {
   COMPREPLY=()
   if [[ $cur == /* ]]; then
     readarray -t COMPREPLY < <(compgen -W "${!_SB_HANDLERS[*]}" -- "$cur")
+    # Mirror __sb_intercept's path carve-out: when no registered slash
+    # command prefix-matches cur, fall through to pathname completion so
+    # absolute paths like /usr/local/bin/foo complete natively. compopt
+    # -o filenames requests bash's filename-aware display (trailing / on
+    # directories, no trailing space after a dir name). The 2>/dev/null
+    # swallows the harmless "not currently executing completion function"
+    # diagnostic when this function is invoked outside a live completion.
+    if (( ${#COMPREPLY[@]} == 0 )); then
+      readarray -t COMPREPLY < <(compgen -f -- "$cur")
+      # compopt errors out (rc=1) when invoked outside an active
+      # completion (e.g. ad-hoc / bats invocation). Tolerate that so the
+      # function stays usable both in live readline and in tests.
+      compopt -o filenames 2>/dev/null ||:
+    fi
     return 0
   fi
   readarray -t COMPREPLY < <(compgen -c -- "$cur")
@@ -458,6 +472,17 @@ __sb_intercept() {
 
   # Pass through anything that does not start with a slash.
   [[ $line =~ ^[[:space:]]*/ ]] || return 0
+
+  # Path carve-out: every registered slash-command key is a single
+  # segment (/word with no internal slash) - see _SB_HANDLERS in
+  # handlers.d/. If the first whitespace-separated token contains
+  # another '/' after its leading one, it's an absolute path the user
+  # wants bash to execve() directly (e.g. /usr/local/bin/foo), not a
+  # slash command. Leave READLINE_LINE unmutated so bash's parser
+  # dispatches normally.
+  local -- _stripped=${line#"${line%%[![:space:]]*}"}
+  local -- _first=${_stripped%%[[:space:]]*}
+  [[ ${_first:1} == */* ]] && return 0
 
   _SB_LAST_ORIGINAL=$line
   # ${PS1@P} expands prompt escapes but preserves the \[ \] non-printing

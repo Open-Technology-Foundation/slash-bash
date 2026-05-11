@@ -197,11 +197,18 @@ Anything not starting with `/` is plain bash:
 [leet] $ echo hello | wc -c
 ```
 
-Anything that *starts* with `/` but isn't a known slash command prints
-`unknown slash command: '/foo'` instead of the bash `No such file or
-directory` error. The interceptor claims **all** lines that start with `/` —
-there is no fallthrough to bash. This matches the CLAUDE.md goal of the
-dispatcher being the single owner of `/`-prefixed input.
+Anything whose first whitespace-separated token is a single `/word`
+segment but isn't a known slash command prints `unknown slash command:
+'/foo'` instead of the bash `No such file or directory` error. This
+matches the CLAUDE.md goal of the dispatcher being the single owner of
+`/word`-prefixed input. **Absolute paths pass through**: tokens like
+`/usr/local/bin/foo`, `/bin/ls -la`, or `/opt/x/y arg` contain an inner
+`/` and are handed straight to bash for native `execve()` — only
+single-segment `/word` is treated as a slash command. Tab completion
+mirrors this: a `/`-prefixed word with no registered-handler prefix-match
+falls through to pathname completion, so `/usr<TAB>` expands to `/usr/`
+and `/usr/local/b<TAB>` to `/usr/local/bin/` exactly as in a plain bash
+shell.
 
 ## Tab completion
 

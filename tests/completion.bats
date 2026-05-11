@@ -70,6 +70,24 @@ _compfire() {
   (( ${#COMPREPLY[@]} > 0 ))
 }
 
+@test "complete_first: '/usr' falls through to pathname completion" {
+  _compfire _sb_complete_first '/usr'
+  # /usr exists on every Linux box; should appear in completions.
+  printf '%s\n' "${COMPREPLY[@]}" | grep -qx '/usr'
+}
+
+@test "complete_first: '/bin' falls through to pathname completion" {
+  _compfire _sb_complete_first '/bin'
+  printf '%s\n' "${COMPREPLY[@]}" | grep -qx '/bin'
+}
+
+@test "complete_first: '/h' still completes to handlers only (no /home leak)" {
+  _compfire _sb_complete_first '/h'
+  # Handler list non-empty, so no fall-through to pathnames.
+  printf '%s\n' "${COMPREPLY[@]}" | grep -qx '/help'
+  ! printf '%s\n' "${COMPREPLY[@]}" | grep -q '^/home'
+}
+
 # ----------------------------------------------------------------------------
 # _sb_complete_agent
 # ----------------------------------------------------------------------------
