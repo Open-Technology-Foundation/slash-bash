@@ -649,10 +649,13 @@ __sb_lazy_complete() {
   if [[ -r /usr/share/bash-completion/bash_completion ]]; then
     # shellcheck source=/dev/null
     if source /usr/share/bash-completion/bash_completion; then
-      # Source succeeded - bash_completion has registered its own
-      # default compspec. Drop ours and tell readline to retry; the
-      # retry now finds the freshly-registered compspec.
-      complete -r -D 2>/dev/null
+      # Source succeeded. bash_completion's own 'complete -D -F
+      # _completion_loader' has already overwritten our stub in the
+      # single -D slot. Do NOT issue 'complete -r -D' here - that
+      # would strip the loader bash_completion just installed and
+      # orphan ~1,029 per-command completions. Just drop our function
+      # body and tell readline to retry; the retry finds the fresh
+      # default compspec (_completion_loader) and dispatches.
       unset -f __sb_lazy_complete
       return 124
     fi

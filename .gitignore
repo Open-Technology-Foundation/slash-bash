@@ -43,4 +43,7 @@ node_modules/
 .vscode/
 .idea/
 
+# Local archive
+.archive/
+
 #fin

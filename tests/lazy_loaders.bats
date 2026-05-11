@@ -121,4 +121,21 @@ teardown() {
   ! [[ -v BASH_COMPLETION_VERSINFO ]]
 }
 
+@test "lazy_complete: preserves bash_completion's default compspec after source" {
+  # Shadow source() to simulate bash_completion's own
+  # 'complete -D -F _completion_loader' registration that overwrites
+  # slash-bash's stub during real loading.
+  source() {
+    _completion_loader() { return 124; }
+    complete -D -F _completion_loader
+    return 0
+  }
+  __sb_lazy_complete || true
+  # After the call, the default compspec must still be _completion_loader,
+  # not removed. Regression guard for slash-bash.bash:655.
+  run complete -p -D
+  ((status == 0))
+  [[ $output == *_completion_loader* ]]
+}
+
 #fin
