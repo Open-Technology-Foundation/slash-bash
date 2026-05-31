@@ -2,7 +2,7 @@
 #shellcheck shell=bats
 # e2e_chord.bats - Phase 2 PTY-driven verification of the chord trick.
 #
-# The chord-trick keybindings (slash-bash.bash:561-564) require a real TTY
+# The chord-trick keybindings (slash-bash.bash "Key bindings" section) require a real TTY
 # - `bind -x` cannot fire and `bind '"\C-m":...'` is rejected when stdin is
 # not a terminal. Phase 1 covers the rewriting / dispatching logic via
 # direct function calls; Phase 2 covers the actual readline path end-to-end.

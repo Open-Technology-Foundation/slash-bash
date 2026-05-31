@@ -278,6 +278,50 @@ teardown() {
   [[ $READLINE_LINE == "__sb_dispatch '/ask hi' & " ]]
 }
 
+# ----------------------------------------------------------------------------
+# Audit-fix regressions: substitution-aware split (CORR-2), all-slash
+# carve-out (CORR-5), tab-aware dispatch split (CORR-4).
+# ----------------------------------------------------------------------------
+
+@test "split: metachar inside \$(...) does NOT split (substitution-aware, CORR-2)" {
+  _SB_SPLIT_CMD=''; _SB_SPLIT_TAIL=''
+  __sb_split_redirect '/ask what does $(grep -c x > /dev/null) mean'
+  [[ $_SB_SPLIT_CMD == '/ask what does $(grep -c x > /dev/null) mean' ]]
+  [[ $_SB_SPLIT_TAIL == '' ]]
+}
+
+@test "split: metachar inside backticks does NOT split (CORR-2)" {
+  _SB_SPLIT_CMD=''; _SB_SPLIT_TAIL=''
+  __sb_split_redirect '/ask `date > x` ok'
+  [[ $_SB_SPLIT_TAIL == '' ]]
+}
+
+@test "split: top-level metachar after a balanced \$(...) still splits (CORR-2)" {
+  _SB_SPLIT_CMD=''; _SB_SPLIT_TAIL=''
+  __sb_split_redirect '/ask $(echo hi) > out'
+  [[ $_SB_SPLIT_CMD == '/ask $(echo hi)' ]]
+  [[ $_SB_SPLIT_TAIL == '> out' ]]
+}
+
+@test "intercept: '//' (all-slashes) dispatches, not treated as a path (CORR-5)" {
+  READLINE_LINE='//'
+  __sb_intercept
+  [[ $READLINE_LINE == "__sb_dispatch '//'" ]]
+}
+
+@test "intercept: '///' (all-slashes) also dispatches (CORR-5)" {
+  READLINE_LINE='///'
+  __sb_intercept
+  [[ $READLINE_LINE == "__sb_dispatch '///'" ]]
+}
+
+@test "dispatch: a TAB between verb and args splits like a space (CORR-4)" {
+  mock_claude_agent list-good
+  run __sb_dispatch $'/agent\thaiku'
+  assert_success
+  assert_output --partial 'agent set to: haiku'
+}
+
 @test "intercept: redirection round-trip through eval writes to file" {
   # E2E: rewriting must produce a line bash actually parses with the
   # redirection applied. Mock _sb_cmd_status to print a known marker, then

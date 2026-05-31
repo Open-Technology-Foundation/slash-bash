@@ -15,7 +15,8 @@ _sb_cmd_status() {
   # otherwise we let the next session re-run discovery.
   : "${SB_CLAUDE_PROJECTS_DIR:=$HOME/.claude/projects}"
   # Map: internal-var -> exported-env-var. Always-emitted vars first;
-  # the tail (SB_KB_LIST, OLLAMA_MODEL) emit only when set.
+  # the tail (active KB, SB_KB_LIST, OLLAMA_MODEL) emit only when set. SB_KB
+  # round-trips into _SB_KB via its env seed at slash-bash.bash source time.
   local -a always=(
     _SB_AGENT:SB_AGENT
     _SB_MODEL:SB_MODEL
@@ -31,7 +32,7 @@ _sb_cmd_status() {
     VECTORDBS:VECTORDBS
     AGENTS_JSON:AGENTS_JSON
   )
-  local -a optional=(SB_KB_LIST:SB_KB_LIST OLLAMA_MODEL:OLLAMA_MODEL)
+  local -a optional=(_SB_KB:SB_KB SB_KB_LIST:SB_KB_LIST OLLAMA_MODEL:OLLAMA_MODEL)
   local -- pair src dst
   for pair in "${always[@]}"; do
     src=${pair%%:*}; dst=${pair#*:}

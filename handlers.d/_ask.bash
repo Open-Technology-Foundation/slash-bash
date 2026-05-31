@@ -47,6 +47,11 @@ _sb_cmd_ask() {
     rc=$?
   else
     _warn "session cwd vanished: ${_SB_SESSION_CWD@Q} - using \$PWD"
+    # Repoint the binding to $PWD so the rc==0 UUID-adoption below looks in
+    # the directory claude.x actually wrote the new JSONL to, not the gone
+    # one (ROB-4) - otherwise the binding stays unbound and every subsequent
+    # /ask starts a brand-new conversation. Mirrors what /rebase does.
+    _SB_SESSION_CWD=$PWD
     VERBOSE=0 CLAUDE_CODE_MAX_OUTPUT_TOKENS=$_SB_MAX_TOKENS "${cmd[@]}" "$prompt"
     rc=$?
   fi
@@ -54,8 +59,8 @@ _sb_cmd_ask() {
   # First /ask after rebase to a fresh cwd: claude.x just minted a JSONL
   # - adopt it so subsequent /ask calls resume it. Gate on rc==0: if the
   # claude.agent run failed (most commonly because a sibling slash-bash
-  # in the same cwd holds the upstream shlock - see
-  # claude.agent:354-375), the newest JSONL belongs to the OTHER shell.
+  # in the same cwd holds the upstream shlock - see the exec shlock
+  # call in claude.agent), the newest JSONL belongs to the OTHER shell.
   # Adopting it would silently rebind this conversation to the
   # sibling's session.
   if (( rc == 0 )) && [[ -z $_SB_SESSION_UUID ]]; then

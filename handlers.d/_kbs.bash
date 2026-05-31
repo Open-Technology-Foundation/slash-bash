@@ -16,7 +16,7 @@ _sb_cmd_kbs() {
   case $mode in
     ''|--select) _sb_select_from_list kb _SB_KB "${_SB_KB_LIST[@]}" ;;
     --list)      _sb_print_list       kb _SB_KB "${_SB_KB_LIST[@]}" ;;
-    *)           _error "unknown option ${mode@Q} (expected --select or --list)"; return 1 ;;
+    *)           _error "unknown option: ${mode@Q} (expected --select or --list)"; return 1 ;;
   esac
 }
 

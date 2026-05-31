@@ -179,7 +179,7 @@ command line) and works without the block.
 | `/kb <name>`, `/knowledgebase <name>` | Switch active KB (validated against `/var/lib/vectordbs/<name>/<name>.cfg`). `off`/`none`/`clear` to clear. No arg shows current. |
 | `/maxtokens <n>` | Set `CLAUDE_CODE_MAX_OUTPUT_TOKENS` for subsequent `/ask` calls. No arg shows current. Positive integer. |
 | `/ollama [model\|off]` | Toggle Ollama backend. Bare `/ollama` enables with default model; `<model>` enables and exports `OLLAMA_MODEL`; `off` disables. |
-| `/ask <text>`, `/ <text>` | One-shot LLM call: `claude.agent -T <agent> --model <model> [-O] [--append-system-prompt-file <kb-cfg>] <text>` with `CLAUDE_CODE_MAX_OUTPUT_TOKENS` set. |
+| `/ask <text>`, `/ <text>` | One-shot LLM call: `claude.agent -T <agent> --model <model> [-O] [--resume <uuid>] [--append-system-prompt-file <kb-cfg>] <text>` with `CLAUDE_CODE_MAX_OUTPUT_TOKENS` set. `--resume` is injected when a session UUID is bound (see `/rebase`). **Quote shell metacharacters in prose** — an unquoted `>` `<` `\|` `;` `&` is parsed as a real redirect/pipe (the tail is handed to bash so you can do `/ask explain X > notes.md`), so `/ask is 5 > 3` truncates a file `3`; write `/ask 'is 5 > 3'` instead. |
 | `/systemprompt [agent]` | Show the system prompt for the active or named agent. Reads `Agents.json` (override path with `AGENTS_JSON` env var). Substitutes `{{spacetime}}` so the displayed prompt mirrors what the model actually sees. |
 | `/history [n]` | Show the last `n` slash invocations from `~/.cache/slash-bash/history` (default 20). |
 | `/status` | Print a bash-reusable env dump of current session state — one `export NAME='value'` line per `SB_*` knob (and the cross-project `VECTORDBS`, `AGENTS_JSON`, `OLLAMA_MODEL`, `SB_CLAUDE_PROJECTS_DIR`). Output is `eval`-safe; redirect to a file and `source` it before re-launching `slash-bash` to round-trip a saved session. |
@@ -477,7 +477,7 @@ Future hooks (still out of scope):
 shellcheck -x slash-bash slash-bash.bash .slash-bash-init claude-sessions handlers.d/*.bash
 bcscheck slash-bash.bash      # full BCS, LLM-backed, slow (~10 min)
 bcscheck claude-sessions       # ditto
-make test                      # bats suite (267 cases)
+make test                      # bats suite (281 cases; 4 e2e skip without BATS_E2E)
 make test-e2e                  # PTY-driven chord-trick verification
 make check                     # combined lint + test gate
 ```

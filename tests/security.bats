@@ -74,4 +74,19 @@ teardown() {
   esac
 }
 
+# ----------------------------------------------------------------------------
+# printf format-string safety - the env-seeded _SB_AGENT prefix is passed as
+# a %s ARGUMENT, never interpolated into the format (ROB-2/SEC-2).
+# ----------------------------------------------------------------------------
+
+@test "printf-safety: hostile SB_AGENT ('%n%s') cannot corrupt diagnostics" {
+  _SB_AGENT='%n%s'
+  run _error 'survives intact'
+  assert_success
+  # The % directives print literally as the prefix; the message is not
+  # consumed or dropped (pre-fix this emitted 'not a valid identifier').
+  assert_output --partial 'survives intact'
+  refute_output --partial 'not a valid identifier'
+}
+
 #fin

@@ -54,7 +54,7 @@ declare -ga    _SB_MODEL_LIST
 read -r -a _SB_MODEL_LIST <<<"${SB_MODEL_LIST:-claude-opus-4-7 claude-opus-4-6 claude-sonnet-4-6 claude-haiku-4-6}"
 # VECTORDBS is a cross-project Okusi convention; reused, not new.
 declare -g  -- _SB_KB_ROOT="${VECTORDBS:-/var/lib/vectordbs}"
-declare -g  -- _SB_KB=''
+declare -g  -- _SB_KB="${SB_KB:-}"
 declare -ga    _SB_KB_LIST=()                  # populated lazily by _sb_load_kb_list
 declare -ig    _SB_MAX_TOKENS="${SB_MAX_TOKENS:-32000}"
 declare -ig    _SB_OLLAMA="${SB_OLLAMA:-0}"
@@ -134,20 +134,26 @@ else
   declare -gr _BOLD='' _DIM='' _ITALIC='' _UNDERLINE='' _REVERSE='' _NC=''
 fi
 
-# __msg PREFIX MSG... - emit one stderr line per MSG with session identity
-# and a sigil. SC2059 is intentional: $1 carries the caller's sigil (which
-# may include ANSI escapes), the agent prefix expands from an internal
-# global (_SB_AGENT/SCRIPT_NAME) never user input, and %s handles the
-# variadic payload. All in-tree callers pass literal sigil strings.
-# shellcheck disable=SC2059
-__msg()     { >&2 printf "${_SB_AGENT:-${SCRIPT_NAME:-slash-bash}}: $1 %s\n" "${@:2}"; }
+# __msg SIGIL MSG... - emit one stderr line per MSG with session identity
+# and a sigil. The prefix and the sigil are passed as %s ARGUMENTS, never
+# interpolated into the printf FORMAT - so a stray '%' in the env-seeded
+# _SB_AGENT (from SB_AGENT) can never act as a format directive. One line
+# per MSG; with no MSG, a single line with an empty payload (preserves the
+# original single-printf behaviour).
+__msg() {
+  local -- _pfx=${_SB_AGENT:-${SCRIPT_NAME:-slash-bash}} _sig=$1
+  shift
+  (($#)) || set -- ''
+  local -- _m
+  for _m in "$@"; do >&2 printf '%s: %s %s\n' "$_pfx" "$_sig" "$_m"; done
+}
 
 _error()   { __msg "${_RED}✗${_NC}" "$@"; }
 _warn()    { __msg "${_YELLOW}▲${_NC}" "$@"; }
 _info()    { ((_VERBOSE)) || return 0; __msg "${_CYAN}◉${_NC}" "$@"; }
 _success() { ((_VERBOSE)) || return 0; __msg "${_GREEN}✓${_NC}" "$@"; }
 _debug()   { ((_DEBUG))   || return 0; __msg "${_RED}⦿${_NC}" "$@"; }
-_vecho()   { ((_VERBOSE)) || return 0; >&2 printf "${_SB_AGENT:-${SCRIPT_NAME:-slash-bash}}: %s\n" "$@"; }
+_vecho()   { ((_VERBOSE)) || return 0; local -- _pfx=${_SB_AGENT:-${SCRIPT_NAME:-slash-bash}} _m; for _m in "$@"; do >&2 printf '%s: %s\n' "$_pfx" "$_m"; done; }
 # _die N MSG... - print error and return N. Uses `return`, not `exit`,
 # because this library is sourced into the user's interactive shell (see
 # the `set -euo pipefail` rationale at lines 27-30); `exit` would kill the
@@ -208,8 +214,8 @@ _sb_iso_now() {
   date -Iseconds 2>/dev/null || date +'%Y-%m-%dT%H:%M:%S%z'
 }
 
-# Hour-granular timestamp matching claude.agent's spacetime_string
-# (claude.agent:68-80). Used to substitute {{spacetime}} in systemprompt
+# Hour-granular timestamp matching claude.agent's spacetime_string()
+# function. Used to substitute {{spacetime}} in systemprompt
 # display so output mirrors what the model actually sees at runtime. Hour
 # granularity keeps the prompt cache stable within each hour window.
 # NOTE: format duplicated from claude.agent - keep in sync if that script
@@ -253,13 +259,15 @@ _sb_select_from_list() {
   local -n __sb_sel_target=$2
   shift 2
   (($#)) || { _error "no ${label}s available"; return 1; }
+
   [[ -t 0 ]] || { _error "/${label}s --select requires an interactive terminal"; return 1; }
+
   >&2 printf 'current %s: %s\n' "$label" "${__sb_sel_target:-<none>}"
   local -- picked=''
-  local -- PS3="select ${label} number (q to cancel): "
+  local -- PS3="select ${label} (1-${#@},q): "
   select picked in "$@"; do
     case ${REPLY:-} in
-      q|Q|'') return 1 ;;
+      0|q|Q|'') return 1 ;;
       *)      ;;
     esac
     if [[ -n $picked ]]; then
@@ -290,9 +298,10 @@ _sb_resolve_agent_name() {
 }
 
 # Look up the full Agents.json key for a short agent name. Mirrors the
-# resolve_agent jq snippet in claude.agent:273-274.
+# jq snippet in claude.agent's resolve_agent() function.
 _sb_agent_key() {
   local -- name=$1
+  #shellcheck disable=SC2155  # _sb_default_agents_json uses ||return 0; rc immaterial
   local -r agents_json=${AGENTS_JSON:-$(_sb_default_agents_json)}
   [[ -n $agents_json && -f $agents_json ]] || return 1
   jq -r --arg name "$name" \
@@ -396,13 +405,15 @@ __sb_dispatch() {
   # Strip leading whitespace.
   line=${line#"${line%%[![:space:]]*}"}
 
+  # Split on the first whitespace RUN (space or tab) - the leading-strip
+  # above and the interceptor both use [[:space:]], so a tab between the
+  # verb and its args must not misroute to 'unknown slash command' (CORR-4).
   local -- cmd args
-  if [[ $line == *' '* ]]; then
-    cmd=${line%% *}
-    args=${line#* }
+  cmd=${line%%[[:space:]]*}
+  if [[ $cmd != "$line" ]]; then
+    args=${line#"$cmd"}
     args=${args#"${args%%[![:space:]]*}"}
   else
-    cmd=$line
     args=''
   fi
 
@@ -429,10 +440,10 @@ __sb_dispatch() {
 
 __sb_split_redirect() {
   local -- line=$1
-  local -i in_squote=0 in_dquote=0 escape=0
+  local -i in_squote=0 in_dquote=0 in_btick=0 escape=0 depth=0
   local -i i len=${#line}
   local -- ch
-  for (( i=0; i<len; i++ )); do
+  for (( i=0; i<len; i+=1 )); do
     ch=${line:i:1}
     if (( escape )); then escape=0; continue; fi
     if (( in_squote )); then
@@ -444,11 +455,26 @@ __sb_split_redirect() {
       [[ $ch == '"' ]] && in_dquote=0
       continue
     fi
+    if (( in_btick )); then
+      [[ $ch == $'\\' ]] && { escape=1; continue; }
+      [[ $ch == '`' ]] && in_btick=0
+      continue
+    fi
     case $ch in
-      "'") in_squote=1 ;;
-      '"') in_dquote=1 ;;
+      "'")  in_squote=1 ;;
+      '"')  in_dquote=1 ;;
+      '`')  in_btick=1 ;;
       $'\\') escape=1 ;;
+      '(')  depth+=1 ;;
+      ')')  ((depth)) && depth+=-1 ||: ;;
       '>'|'<'|'|'|';'|'&')
+        # Suppress the split while inside a (sub)shell or command-/process-
+        # substitution group - $(...), `...`, <(...), >(...), (...). A
+        # metachar there belongs to bash's nested parse, not a top-level
+        # redirect; splitting on it corrupted the rewrite (CORR-2). The
+        # metachar is still captured verbatim inside the @Q-quoted command
+        # portion, so bash re-parses the substitution intact.
+        ((depth)) && continue ||:
         _SB_SPLIT_CMD=${line:0:i}
         _SB_SPLIT_CMD=${_SB_SPLIT_CMD%"${_SB_SPLIT_CMD##*[![:space:]]}"}
         _SB_SPLIT_TAIL=${line:i}
@@ -465,6 +491,15 @@ __sb_split_redirect() {
 # so bash never tries to execve(/foo). Splits at the first unquoted shell
 # metachar so redirection / pipe / sequencing syntax in the tail is parsed
 # by bash, not swallowed by the @Q quote.
+#
+# SHARP EDGE: the split applies to ALL handlers, including the free-text
+# /ask. This is intentional - it lets you redirect or pipe a handler's
+# output (`/ask explain X > notes.md`, `/help | less`). The cost is that an
+# UNQUOTED >, <, |, ;, & in ordinary /ask prose is taken as a real shell
+# operator: `/ask is 5 > 3` truncates a file named `3` and drops the rest
+# of the prompt. Quote metacharacters in prose (`/ask 'is 5 > 3'`) to keep
+# them literal. (__sb_split_redirect is now substitution-aware, so a
+# metachar inside $(...), `...`, <(...) is left to bash's nested parse.)
 # ---------------------------------------------------------------------------
 
 __sb_intercept() {
@@ -482,7 +517,10 @@ __sb_intercept() {
   # dispatches normally.
   local -- _stripped=${line#"${line%%[![:space:]]*}"}
   local -- _first=${_stripped%%[[:space:]]*}
-  [[ ${_first:1} == */* ]] && return 0
+  # A token of ONLY slashes (//, ///) is not a real path; let it fall through
+  # to the friendly 'unknown slash command' diagnostic rather than reaching
+  # bash and leaking a raw 'Is a directory' error (CORR-5).
+  [[ ${_first:1} == */* && -n ${_first//\//} ]] && return 0
 
   _SB_LAST_ORIGINAL=$line
   # ${PS1@P} expands prompt escapes but preserves the \[ \] non-printing
@@ -520,10 +558,13 @@ __sb_intercept() {
 _sb_ensure_history_dir() {
   local -- d=${_SB_HISTORY_FILE%/*}
   if [[ ! -d $d ]]; then
-    mkdir -p -- "$d" && chmod 0700 -- "$d"
+    # Create restrictive from the start via a umask subshell so there is no
+    # window at the umask-default 0755/0644 before the chmod lands (SEC-1
+    # TOCTOU); the chmod then becomes belt-and-suspenders.
+    ( umask 077; mkdir -p -- "$d" ) && chmod 0700 -- "$d"
   fi
   if [[ ! -e $_SB_HISTORY_FILE ]]; then
-    : > "$_SB_HISTORY_FILE" && chmod 0600 -- "$_SB_HISTORY_FILE"
+    ( umask 077; : > "$_SB_HISTORY_FILE" ) && chmod 0600 -- "$_SB_HISTORY_FILE"
   fi
 }
 
@@ -548,8 +589,13 @@ _sb_log_dispatch() {
   else
     payload=${_SB_LAST_ORIGINAL%% *}
   fi
-  printf '%s\t%s\n' "$(_sb_iso_now)" "$payload" \
-    >> "$_SB_HISTORY_FILE"
+  # On a write failure (unwritable parent, bad SB_HISTORY_FILE path) warn
+  # ONCE and disable logging for the session by retargeting to /dev/null,
+  # rather than leaking bash's raw redirect error on every dispatch (ROB-6).
+  if ! { printf '%s\t%s\n' "$(_sb_iso_now)" "$payload" >> "$_SB_HISTORY_FILE"; } 2>/dev/null; then
+    _warn "history write failed: ${_SB_HISTORY_FILE@Q} (logging disabled this session)"
+    _SB_HISTORY_FILE=/dev/null
+  fi
   _SB_LAST_ORIGINAL=''
   _SB_LAST_PROMPT=''
 }
@@ -618,7 +664,7 @@ unset -v _sb_handler_file _sb_was_nullglob
 declare -- _sb_cmd _sb_fn
 for _sb_cmd in "${!_SB_HANDLERS[@]}"; do
   _sb_fn=${_SB_HANDLERS[$_sb_cmd]}
-  declare -F -- "$_sb_fn" >/dev/null 2>&1 \
+  declare -F -- "$_sb_fn" &>/dev/null \
     || _warn "internal: ${_sb_cmd} -> ${_sb_fn@Q} not defined"
 done
 unset -v _sb_cmd _sb_fn
@@ -732,6 +778,12 @@ if [[ -r $_SB_SITE_BASH ]]; then
     _sb_site_mode=${_sb_site_meta##* }
     if [[ $_sb_site_owner != "$USER" ]]; then
       _warn "skipping ${_SB_SITE_BASH@Q}: owned by ${_sb_site_owner}, not ${USER}"
+    elif [[ ! $_sb_site_mode =~ ^[0-7]+$ ]]; then
+      # Fail CLOSED: an unparseable mode must not reach the arithmetic below,
+      # where a non-octal value errors, the elif evaluates FALSE (errexit is
+      # off), and control would fall through to `source` - bypassing the
+      # world-writable check entirely (ROB-1).
+      _warn "skipping ${_SB_SITE_BASH@Q}: unparseable mode (${_sb_site_mode@Q})"
     elif (( 8#$_sb_site_mode & 8#022 )); then
       _warn "skipping ${_SB_SITE_BASH@Q}: group/other-writable (mode ${_sb_site_mode})"
     else
